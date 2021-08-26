@@ -10,7 +10,7 @@ message.
 
 Formally, the arguments are as follows:
 
-* `tail <file>` should print the last 10 lines of the given file to standard out
+* `tail <file>` prints the last 10 lines of the given file to standard out
 	* This supports absolute and relative unix file paths
 * `tail -n number <file>` prints the last `number` lines of the file
 * `tail <file1> <file2> ...` prints the the last 10 lines of all the provided files
