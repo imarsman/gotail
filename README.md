@@ -11,11 +11,11 @@ message.
 Formally, the arguments are as follows:
 
 * `tail <file>` should print the last 10 lines of the given file to standard out
-	*   This should support absolute and relative unix file paths
-* `tail -n number <file>` should print the last `number` lines of the file
-* `tail <file1> <file2> ...` should print the the last 10 lines of all the provided files
-* `tail -n number <file1> <file2>` should print the last -n lines of all provided files
-* `tail -pretty <file1> <file2>` should print the last 10 lines of all provided
+	* This supports absolute and relative unix file paths
+* `tail -n number <file>` prints the last `number` lines of the file
+* `tail <file1> <file2> ...` prints the the last 10 lines of all the provided files
+* `tail -n number <file1> <file2>` prints the last -n lines of all provided files
+* `tail -pretty <file1> <file2>` prints the last 10 lines of all provided
   files with extra formatting.
 
 A hard-core application would use a buffer to hold lines and do something like
