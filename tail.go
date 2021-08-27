@@ -49,14 +49,13 @@ func getLines(num int, path string) ([]string, error) {
 		}
 	}
 
-	// Use a reverse function. Does work in place.
-	var reverse = func(ss []string) {
-		last := len(ss) - 1
-		for i := 0; i < len(ss)/2; i++ {
-			ss[i], ss[last-i] = ss[last-i], ss[i]
+	// Another way to do it, which is easier to follow for me. Sample I found
+	// returned the slice but you don't need to do that with a slice.
+	var reverse = func(s []string) {
+		for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+			s[i], s[j] = s[j], s[i]
 		}
 	}
-
 	reverse(lines)
 
 	return lines, nil
