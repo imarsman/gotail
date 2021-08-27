@@ -49,15 +49,17 @@ func getLines(num int, path string) ([]string, error) {
 		}
 	}
 
-	reversed := []string{}
-
-	// Updated to fix sorting
-	for i := range lines {
-		n := strings.TrimSpace(lines[len(lines)-1-i])
-		reversed = append(reversed, n)
+	// Use a reverse function. Does work in place.
+	var reverse = func(ss []string) {
+		last := len(ss) - 1
+		for i := 0; i < len(ss)/2; i++ {
+			ss[i], ss[last-i] = ss[last-i], ss[i]
+		}
 	}
 
-	return reversed, nil
+	reverse(lines)
+
+	return lines, nil
 }
 
 func main() {
