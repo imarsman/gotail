@@ -26,7 +26,6 @@ func getLines(num int, path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
 	// A bit inefficient as whole file is read in then out again in reverse
 	// order up to num.
@@ -35,6 +34,9 @@ func getLines(num int, path string) ([]string, error) {
 	for scanner.Scan() {
 		all = append(all, scanner.Text())
 	}
+
+	// Slightly more efficient to avoid defer and it's ok to do now
+	file.Close()
 
 	// Get last num lines
 	var lines []string
