@@ -18,12 +18,16 @@ Formally, the arguments are as follows:
 * `tail -pretty <file1> <file2>` prints the last 10 lines of all provided
   files with extra formatting.
 
+
 A hard-core application would use a buffer to hold lines and do something like
 iterate in reverse through the contents of a file, printing out line by line
 until the target number had been reached or there were no more lines. This could
 be done with some sort of rune processing character by character with a count as
 newline characters were encountered. I would be able to write such an
 application, but I would need to have a good reason to expend the extra effort.
+
+I did modify the code to print out a file at a time rather than building a
+buffer of all of the lines for all of the files then printing.
 
 This code has a test and a benchmark. In the base directory you can run the test
 by typing:
