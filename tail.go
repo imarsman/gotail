@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 )
 
@@ -50,12 +49,15 @@ func getLines(num int, path string) ([]string, error) {
 		}
 	}
 
-	// Sort reverse
-	sort.Slice(lines, func(i, j int) bool {
-		return i > j
-	})
+	reverseOrderSlice := []string{}
 
-	return lines, nil
+	// Updated to fix sorting
+	for i := range lines {
+		n := strings.TrimSpace(lines[len(lines)-1-i])
+		reverseOrderSlice = append(reverseOrderSlice, n)
+	}
+
+	return reverseOrderSlice, nil
 }
 
 func main() {
