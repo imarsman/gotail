@@ -88,7 +88,7 @@ func main() {
 		}
 		for i := 0; i < len(lines); i++ {
 			if printLines == true {
-				builder.WriteString(fmt.Sprintf("%-3d %s\n", i+1, lines[i]))
+				builder.WriteString(fmt.Sprintf("%3d %s\n", i+1, lines[i]))
 				continue
 			}
 			builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
