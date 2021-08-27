@@ -34,6 +34,9 @@ func getLines(num int, path string) ([]string, error) {
 	for scanner.Scan() {
 		all = append(all, scanner.Text())
 	}
+	if scanner.Err() != nil {
+		return []string{}, scanner.Err()
+	}
 
 	// Slightly more efficient to avoid defer and it's ok to do now
 	file.Close()
@@ -52,7 +55,7 @@ func getLines(num int, path string) ([]string, error) {
 		return i > j
 	})
 
-	return lines, scanner.Err()
+	return lines, nil
 }
 
 func main() {
