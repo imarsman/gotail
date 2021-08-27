@@ -28,11 +28,11 @@ application, but I would need to have a good reason to expend the extra effort.
 This code has a test and a benchmark. In the base directory you can run the test
 by typing:
 
-`go test -v .`
+`go test -v ./...`
 
 To run the benchmark, in the base directory type:
 
-`go test -run=XXX -bench=. -benchmem`
+`go test -run=XXX -bench=. -benchmem ./...`
 
 
 Ian A. Marsman
