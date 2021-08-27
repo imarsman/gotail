@@ -76,7 +76,7 @@ func main() {
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
 	var write = func(fname string, lines []string) {
-		builder := strings.Builder{}
+		builder := new(strings.Builder)
 		if p == true {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
 		}
@@ -84,8 +84,8 @@ func main() {
 		if p == true {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
 		}
-		for _, v := range lines {
-			builder.WriteString(fmt.Sprintf("%s\n", v))
+		for i := 0; i < len(lines); i++ {
+			builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
 		}
 		fmt.Println(strings.TrimSpace(builder.String()))
 	}
