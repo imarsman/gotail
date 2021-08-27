@@ -20,7 +20,7 @@ Formally, the arguments are as follows:
 * `tail -N <file>` prints the last 10 lines of the given file to standard out
   with leading line numbering.
 
-Somewhat surprisingly, file glogging works. Thus this works:
+Somewhat surprisingly, file globbing works. Thus this works:
 
 `./tail -N -n 15 sample/*.txt`
 
