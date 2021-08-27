@@ -65,6 +65,8 @@ func main() {
 	flag.BoolVar(&p, "pretty", false, "add formatting to output")
 	var n int
 	flag.IntVar(&n, "n", 10, "number of lines")
+	var printLines bool
+	flag.BoolVar(&printLines, "N", false, "show line numbers")
 	flag.Parse()
 	if h == true {
 		fmt.Println("Print last n lines of one or more files")
@@ -85,6 +87,10 @@ func main() {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
 		}
 		for i := 0; i < len(lines); i++ {
+			if printLines == true {
+				builder.WriteString(fmt.Sprintf("%-3d %s\n", i+1, lines[i]))
+				continue
+			}
 			builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
 		}
 		fmt.Println(strings.TrimSpace(builder.String()))
@@ -93,12 +99,13 @@ func main() {
 	// Iterate through list of files (the bits that are not flags), using a
 	// strings builder to prepare output. Strings builder avoids allocation.
 	// This could be more efficient if the lines were printed immediately.
-	for _, v := range flag.Args() {
-		lines, err := getLines(n, v)
+	args := flag.Args()
+	for i := 0; i < len(args); i++ {
+		lines, err := getLines(n, args[i])
 		if err != nil {
 			// panic if something like a bad filename is used
 			panic(err)
 		}
-		write(v, lines)
+		write(args[i], lines)
 	}
 }
