@@ -17,6 +17,8 @@ Formally, the arguments are as follows:
 * `tail -n number <file1> <file2>` prints the last -n lines of all provided files
 * `tail -pretty <file1> <file2>` prints the last 10 lines of all provided
   files with extra formatting.
+* `tail -N <file>` prints the last 10 lines of the given file to standard out
+  with leading line numbering.
 
 A hard-core application would use a buffer to hold lines and do something like
 iterate in reverse through the contents of a file, printing out line by line
