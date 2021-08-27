@@ -18,7 +18,6 @@ Formally, the arguments are as follows:
 * `tail -pretty <file1> <file2>` prints the last 10 lines of all provided
   files with extra formatting.
 
-
 A hard-core application would use a buffer to hold lines and do something like
 iterate in reverse through the contents of a file, printing out line by line
 until the target number had been reached or there were no more lines. This could
@@ -38,5 +37,8 @@ To run the benchmark, in the base directory type:
 
 `go test -run=XXX -bench=. -benchmem ./...`
 
+To see what the Go compiler does with the code type:
+
+`go build -gcflags '-m -m' ./*.go 2>&1 |less`
 
 Ian A. Marsman

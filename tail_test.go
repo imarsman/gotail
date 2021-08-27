@@ -22,10 +22,6 @@ import (
 //  go tool pprof -http=:8080 memprofile.out
 //  go tool pprof -http=:8080 cpuprofile.out
 
-// To generate a new RSA private/public key pair
-// openssl genrsa -out ./id_rsa 4096
-// openssl rsa -in ./id_rsa -pubout -out ./id_rsa.pub
-
 const (
 	bechmarkBytesPerOp int64 = 10
 )
