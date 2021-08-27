@@ -49,15 +49,15 @@ func getLines(num int, path string) ([]string, error) {
 		}
 	}
 
-	reverseOrderSlice := []string{}
+	reversed := []string{}
 
 	// Updated to fix sorting
 	for i := range lines {
 		n := strings.TrimSpace(lines[len(lines)-1-i])
-		reverseOrderSlice = append(reverseOrderSlice, n)
+		reversed = append(reversed, n)
 	}
 
-	return reverseOrderSlice, nil
+	return reversed, nil
 }
 
 func main() {
