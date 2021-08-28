@@ -89,7 +89,7 @@ func main() {
 		if p == true {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
 		}
-		builder.WriteString(fmt.Sprintf("File %s showing %d of %d\n", fname, len(lines), total))
+		builder.WriteString(fmt.Sprintf("File %s showing %d of %d lines\n", fname, len(lines), total))
 		if p == true {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
 		}
