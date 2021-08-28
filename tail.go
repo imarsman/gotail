@@ -52,13 +52,16 @@ func getLines(num int, path string) ([]string, int, error) {
 	}
 
 	// Another way to do it, which is easier to follow for me. Sample I found
-	// returned the slice but you don't need to do that with a slice.
-	var reverse = func(s []string) {
-		for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-			s[i], s[j] = s[j], s[i]
+	// returned the slice but you don't need to do that with a slice when it is
+	// not being changed in size. As a rule, though, if the slice might be
+	// changed you can pass a pointer to it, though that makes it a bit more
+	// cumbersome syntactially.
+	var reverse = func(s *[]string) {
+		for i, j := 0, len(*s)-1; i < j; i, j = i+1, j-1 {
+			(*s)[i], (*s)[j] = (*s)[j], (*s)[i]
 		}
 	}
-	reverse(lines)
+	reverse(&lines)
 
 	return lines, total, nil
 }
