@@ -48,7 +48,7 @@ func init() {
 // Get some lines
 func TestGetLines(t *testing.T) {
 
-	lines, total, err := getLines(10, "sample/1.txt")
+	lines, total, err := getLines(10, false, "sample/1.txt")
 	if err != nil {
 		t.Fail()
 	}
@@ -68,7 +68,7 @@ func BenchmarkGetLines(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			lines, total, err = getLines(10, "sample/1.txt")
+			lines, total, err = getLines(10, false, "sample/1.txt")
 		}
 	})
 

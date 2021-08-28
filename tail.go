@@ -20,7 +20,7 @@ import (
 
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
-func getLines(num int, path string) ([]string, int, error) {
+func getLines(num int, head bool, path string) ([]string, int, error) {
 	var total int
 	file, err := os.Open(path)
 	if err != nil {
@@ -49,30 +49,50 @@ func getLines(num int, path string) ([]string, int, error) {
 
 	total = len(all)
 
-	// Get last num lines by iterating backwards
-	// Slightly more efficient to pre-allocate capacity to known value.
 	var lines = make([]string, 0, num)
-	for i := len(all) - 1; i > -1; i-- {
-		lines = append(lines, all[i])
-		if len(lines) == num {
-			break
-		}
-	}
 
-	// Another way to do it, which is easier to follow for me. Sample I found
-	// returned the slice but you don't need to do that with a slice when it is
-	// not being changed in size. As a rule, though, if the slice might be
-	// changed you can pass a pointer to it, though that makes it a bit more
-	// cumbersome syntactially. I dealt with it in terms of pointers to
-	// experiment with the contorted dereferencing.
-	var reverse = func(s *[]string) {
-		for i, j := 0, len(*s)-1; i < j; i, j = i+1, j-1 {
-			(*s)[i], (*s)[j] = (*s)[j], (*s)[i]
+	if head {
+		// Get the first lines instead of the last lines
+		if total >= num {
+			for i := 0; i < num; i++ {
+				lines = append(lines, all[i])
+				if len(lines) == num {
+					break
+				}
+			}
+		} else {
+			for i := 0; i < total; i++ {
+				lines = append(lines, all[i])
+				if len(lines) == num {
+					break
+				}
+			}
 		}
-	}
+	} else {
+		// Get last num lines by iterating backwards
+		// Slightly more efficient to pre-allocate capacity to known value.
+		for i := len(all) - 1; i > -1; i-- {
+			lines = append(lines, all[i])
+			if len(lines) == num {
+				break
+			}
+		}
 
-	// Call the function just defined
-	reverse(&lines)
+		// Another way to do it, which is easier to follow for me. Sample I found
+		// returned the slice but you don't need to do that with a slice when it is
+		// not being changed in size. As a rule, though, if the slice might be
+		// changed you can pass a pointer to it, though that makes it a bit more
+		// cumbersome syntactially. I dealt with it in terms of pointers to
+		// experiment with the contorted dereferencing.
+		var reverse = func(s *[]string) {
+			for i, j := 0, len(*s)-1; i < j; i, j = i+1, j-1 {
+				(*s)[i], (*s)[j] = (*s)[j], (*s)[i]
+			}
+		}
+
+		// Call the function just defined
+		reverse(&lines)
+	}
 
 	return lines, total, nil
 }
@@ -80,16 +100,24 @@ func getLines(num int, path string) ([]string, int, error) {
 func main() {
 	var h bool
 	flag.BoolVar(&h, "h", false, "print usage")
+
 	var p bool
 	flag.BoolVar(&p, "p", false, "add formatting to output")
 	flag.BoolVar(&p, "pretty", false, "add formatting to output")
+
 	var n int
 	flag.IntVar(&n, "n", 10, "number of lines")
+
 	var printLines bool
 	flag.BoolVar(&printLines, "N", false, "show line numbers")
+
+	var head bool
+	flag.BoolVar(&head, "H", false, "print head of file rather than tail")
+
 	flag.Parse()
+
 	if h == true {
-		fmt.Println("Print last n lines of one or more files")
+		fmt.Println("Print tail (or head) n lines of one or more files")
 		fmt.Println("Example: tail -n 10 file1.txt file2.txt")
 		flag.PrintDefaults()
 		os.Exit(0)
@@ -98,21 +126,25 @@ func main() {
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
 	// Added total for more informative output.
-	var write = func(fname string, lines []string, total int) {
+	var write = func(fname string, head bool, lines []string, total int) {
 		builder := new(strings.Builder)
+		headStr := "last"
+		if head {
+			headStr = "first"
+		}
 		if p == true {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
 		}
-		builder.WriteString(fmt.Sprintf("File %s showing %d of %d lines\n", fname, len(lines), total))
+		builder.WriteString(fmt.Sprintf("File %s showing %s %d of %d lines\n", fname, headStr, len(lines), total))
 		if p == true {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
 		}
 		for i := 0; i < len(lines); i++ {
 			if printLines == true {
 				builder.WriteString(fmt.Sprintf("%-3d %s\n", i+1, lines[i]))
-				continue
+			} else {
+				builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
 			}
-			builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
 		}
 		fmt.Println(strings.TrimSpace(builder.String()))
 	}
@@ -121,11 +153,11 @@ func main() {
 	// strings builder to prepare output. Strings builder avoids allocation.
 	args := flag.Args()
 	for i := 0; i < len(args); i++ {
-		lines, total, err := getLines(n, args[i])
+		lines, total, err := getLines(n, head, args[i])
 		if err != nil {
 			// panic if something like a bad filename is used
 			panic(err)
 		}
-		write(args[i], lines, total)
+		write(args[i], head, lines, total)
 	}
 }

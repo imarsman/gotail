@@ -12,6 +12,7 @@ Formally, the arguments are as follows:
 
 * `tail <file>` prints the last 10 lines of the given file to standard out
 	* This supports absolute and relative unix file paths
+* `tail -H <file>` prints the first `number` lines of the file
 * `tail -n number <file>` prints the last `number` lines of the file
 * `tail <file1> <file2> ...` prints the the last 10 lines of all the provided files
 * `tail -n number <file1> <file2>` prints the last -n lines of all provided files
