@@ -22,6 +22,22 @@ import (
 //  go tool pprof -http=:8080 memprofile.out
 //  go tool pprof -http=:8080 cpuprofile.out
 
+/*
+	Interestingly, the naive implementation is faster than the official one. This
+	implemenation does not do useful things like follow a log that is having lines
+	added to it. That is a difficult thing to do cross-platform.
+
+	$: time tail -30 sample/*.txt >/dev/null
+	real	0m0.021s
+	user	0m0.009s
+	sys	    0m0.011s
+
+	$: time ./tail -p -N -n 30 sample/*.txt >/dev/null
+	real	0m0.005s
+	user	0m0.002s
+	sys	    0m0.002s
+*/
+
 const (
 	bechmarkBytesPerOp int64 = 10
 )
@@ -32,11 +48,11 @@ func init() {
 // Get some lines
 func TestGetLines(t *testing.T) {
 
-	lines, err := getLines(10, "sample/1.txt")
+	lines, total, err := getLines(10, "sample/1.txt")
 	if err != nil {
 		t.Fail()
 	}
-	t.Log("lines", lines)
+	t.Log("lines", lines, "total", total)
 }
 
 // go test -run=XXX -bench=. -benchmem
@@ -44,6 +60,7 @@ func TestGetLines(t *testing.T) {
 func BenchmarkGetLines(b *testing.B) {
 
 	var lines []string
+	var total int
 	var err error
 
 	b.SetBytes(bechmarkBytesPerOp)
@@ -51,11 +68,14 @@ func BenchmarkGetLines(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			lines, err = getLines(10, "sample/1.txt")
+			lines, total, err = getLines(10, "sample/1.txt")
 		}
 	})
 
 	if len(lines) == 0 {
+		b.Fail()
+	}
+	if total == 0 {
 		b.Fail()
 	}
 	if err != nil {

@@ -27,10 +27,19 @@ func getLines(num int, path string) ([]string, int, error) {
 		return nil, total, err
 	}
 
+	// Deferring in case an error occurs
+	defer file.Close()
+
 	// A bit inefficient as whole file is read in then out again in reverse
 	// order up to num.
+	// Since we will have to get the last items we have to read all lines in
+	// then shorten the output. Other algorithms would involve avoiding reading
+	// all the contents in by using a buffer or counting lines or some other
+	// technique.
 	var all []string
+
 	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		all = append(all, scanner.Text())
 	}
@@ -39,11 +48,10 @@ func getLines(num int, path string) ([]string, int, error) {
 	}
 
 	total = len(all)
-	// Slightly more efficient to avoid defer and it's ok to do now
-	file.Close()
 
-	// Get last num lines
-	var lines []string
+	// Get last num lines by iterating backwards
+	// Slightly more efficient to pre-allocate capacity to known value.
+	var lines = make([]string, 0, num)
 	for i := len(all) - 1; i > -1; i-- {
 		lines = append(lines, all[i])
 		if len(lines) == num {
@@ -55,12 +63,15 @@ func getLines(num int, path string) ([]string, int, error) {
 	// returned the slice but you don't need to do that with a slice when it is
 	// not being changed in size. As a rule, though, if the slice might be
 	// changed you can pass a pointer to it, though that makes it a bit more
-	// cumbersome syntactially.
+	// cumbersome syntactially. I dealt with it in terms of pointers to
+	// experiment with the contorted dereferencing.
 	var reverse = func(s *[]string) {
 		for i, j := 0, len(*s)-1; i < j; i, j = i+1, j-1 {
 			(*s)[i], (*s)[j] = (*s)[j], (*s)[i]
 		}
 	}
+
+	// Call the function just defined
 	reverse(&lines)
 
 	return lines, total, nil
