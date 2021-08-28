@@ -97,7 +97,7 @@ func main() {
 
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
-	// Added total for when pretty printing used.
+	// Added total for more informative output.
 	var write = func(fname string, lines []string, total int) {
 		builder := new(strings.Builder)
 		if p == true {
@@ -119,7 +119,6 @@ func main() {
 
 	// Iterate through list of files (the bits that are not flags), using a
 	// strings builder to prepare output. Strings builder avoids allocation.
-	// This could be more efficient if the lines were printed immediately.
 	args := flag.Args()
 	for i := 0; i < len(args); i++ {
 		lines, total, err := getLines(n, args[i])
