@@ -20,10 +20,11 @@ import (
 
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
-func getLines(num int, path string) ([]string, error) {
+func getLines(num int, path string) ([]string, int, error) {
+	var total int
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, total, err
 	}
 
 	// A bit inefficient as whole file is read in then out again in reverse
@@ -34,9 +35,10 @@ func getLines(num int, path string) ([]string, error) {
 		all = append(all, scanner.Text())
 	}
 	if scanner.Err() != nil {
-		return []string{}, scanner.Err()
+		return []string{}, total, scanner.Err()
 	}
 
+	total = len(all)
 	// Slightly more efficient to avoid defer and it's ok to do now
 	file.Close()
 
@@ -58,13 +60,14 @@ func getLines(num int, path string) ([]string, error) {
 	}
 	reverse(lines)
 
-	return lines, nil
+	return lines, total, nil
 }
 
 func main() {
 	var h bool
 	flag.BoolVar(&h, "h", false, "print usage")
 	var p bool
+	flag.BoolVar(&p, "p", false, "add formatting to output")
 	flag.BoolVar(&p, "pretty", false, "add formatting to output")
 	var n int
 	flag.IntVar(&n, "n", 10, "number of lines")
@@ -80,12 +83,13 @@ func main() {
 
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
-	var write = func(fname string, lines []string) {
+	// Added total for when pretty printing used.
+	var write = func(fname string, lines []string, total int) {
 		builder := new(strings.Builder)
 		if p == true {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
 		}
-		builder.WriteString(fmt.Sprintf("File %s\n", fname))
+		builder.WriteString(fmt.Sprintf("File %s showing %d of %d\n", fname, len(lines), total))
 		if p == true {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
 		}
@@ -104,11 +108,11 @@ func main() {
 	// This could be more efficient if the lines were printed immediately.
 	args := flag.Args()
 	for i := 0; i < len(args); i++ {
-		lines, err := getLines(n, args[i])
+		lines, total, err := getLines(n, args[i])
 		if err != nil {
 			// panic if something like a bad filename is used
 			panic(err)
 		}
-		write(args[i], lines)
+		write(args[i], lines, total)
 	}
 }
