@@ -97,30 +97,39 @@ func getLines(num int, head bool, path string) ([]string, int, error) {
 	return lines, total, nil
 }
 
+func printHelp() {
+	fmt.Println("Print tail (or head) n lines of one or more files")
+	fmt.Println("Example: tail -n 10 file1.txt file2.txt")
+	flag.PrintDefaults()
+	os.Exit(0)
+}
+
 func main() {
 	var h bool
+	// Help flag
 	flag.BoolVar(&h, "h", false, "print usage")
 
+	var n int
+	// Number of lines to print argument
+	flag.IntVar(&n, "n", 10, "number of lines")
+
 	var p bool
+	// Pretty printing flag
 	flag.BoolVar(&p, "p", false, "add formatting to output")
 	flag.BoolVar(&p, "pretty", false, "add formatting to output")
 
-	var n int
-	flag.IntVar(&n, "n", 10, "number of lines")
-
 	var printLines bool
+	// Pring line numbers flag
 	flag.BoolVar(&printLines, "N", false, "show line numbers")
 
 	var head bool
+	// Print head lines flag
 	flag.BoolVar(&head, "H", false, "print head of file rather than tail")
 
 	flag.Parse()
 
 	if h == true {
-		fmt.Println("Print tail (or head) n lines of one or more files")
-		fmt.Println("Example: tail -n 10 file1.txt file2.txt")
-		flag.PrintDefaults()
-		os.Exit(0)
+		printHelp()
 	}
 
 	// If a large amount of processing is required handling output for a file at
@@ -152,6 +161,13 @@ func main() {
 	// Iterate through list of files (the bits that are not flags), using a
 	// strings builder to prepare output. Strings builder avoids allocation.
 	args := flag.Args()
+
+	if len(args) == 0 {
+		fmt.Println("No files specified. Exiting with usage information")
+		fmt.Println()
+		printHelp()
+	}
+
 	for i := 0; i < len(args); i++ {
 		lines, total, err := getLines(n, head, args[i])
 		if err != nil {

@@ -22,6 +22,17 @@ Formally, the arguments are as follows:
 * `tail -N <file>` prints the last 10 lines of the given file to standard out
   with leading line numbering.
 
+The app can be build by typing (with a go 1.16 compiler. If you have an older
+version of Go installed you can change the version number in go.mod. This should
+be compatible with earlier versions of go like 1.14 and 1.15 though I have not
+checked.
+
+`go build tail.go`
+
+It can be run without building by typing
+
+`go run tail.go`
+
 Somewhat surprisingly, file globbing works. Thus this works:
 
 `./tail -N -n 15 sample/*.txt`
