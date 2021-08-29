@@ -16,6 +16,8 @@ support for starting at an offset would be fun but is not implemented.
 
 The arguments are as follows:
 
+* `tail -h` print out summary usage information. This is also printed out if no
+  files are specified.
 * `tail <file>` prints the tail (last) 10 lines of the given file to standard out
 	* This supports absolute and relative unix file paths
 * `tail -H <file>` prints the head (first) lines of the file
