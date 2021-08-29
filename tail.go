@@ -142,11 +142,11 @@ func main() {
 			headStr = "first"
 		}
 		if p == true {
-			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
+			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 70)))
 		}
-		builder.WriteString(fmt.Sprintf("File %s showing %s %d of %d lines\n", fname, headStr, len(lines), total))
+		builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", fname, headStr, len(lines), total))
 		if p == true {
-			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 50)))
+			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 70)))
 		}
 		for i := 0; i < len(lines); i++ {
 			if printLines == true {
