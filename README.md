@@ -23,7 +23,7 @@ The arguments are as follows:
 * `tail -H <file>` prints the head (first) lines of the file
 * `tail -n number <file>` prints the tail (last) `number` lines of the file
 * `tail <file1> <file2> ...` prints the the tail (last) 10 lines of all the provided files
-* `tail <*.txt> ...` prints the the tail (last) 10 lines of all matching files
+* `tail <sample/*.txt> ...` prints the the tail (last) 10 lines of all matching files
 * `tail -n number <file1> <file2>` prints the tail (last) -n lines of all provided files
 * `tail -p <file1> <file2>` prints the tail (last) 10 lines of all provided files 
   with extra formatting.
