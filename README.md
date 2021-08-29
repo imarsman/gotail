@@ -33,11 +33,11 @@ The arguments are as follows:
 
 # Building and Running
 
-The app can be build by typing (with a Go 1.16 compiler. If you have an older
-version of Go installed you can change the version number in go.mod if there is
-a complaint on trying to compile. This should be compatible with earlier
-versions of Go like 1.14 and 1.15 though I have not checked. This app does not
-use embedding, which appeared in Go 1.16.
+The app can be built by typing the command below (with a Go 1.16 compiler). If
+you have an older version of Go installed you can change the version number in
+go.mod if there is a complaint on trying to compile. This should be compatible
+with earlier versions of Go like 1.14 and 1.15 though I have not checked. This
+app does not use embedding, which appeared in Go 1.16.
 
 `go build tail.go`
 
