@@ -21,13 +21,13 @@ The arguments are as follows:
 * `tail <file>` prints the tail (last) 10 lines of the given file to standard out
 	* This supports absolute and relative unix file paths
 * `tail -H <file>` prints the head (first) lines of the file
+	* `tail -H <file> -n +10` print first lines starting +n lines into file
 * `tail -n number <file>` prints the tail (last) `number` lines of the file
 * `tail <file1> <file2> ...` prints the the tail (last) 10 lines of all the provided files
 * `tail <sample/*.txt> ...` prints the the tail (last) 10 lines of all matching files
 * `tail -n number <file1> <file2>` prints the tail (last) -n lines of all provided files
 * `tail -p <file1> <file2>` prints the tail (last) 10 lines of all provided files 
-  with extra formatting.
-  * Also accepts -pretty
+  with extra formatting. Extra formatting only used if more than one file listed.
 * `tail -N <file>` prints with leading lines numbers the tail (last) 10 lines of
   the given file to standard out with leading line numbering.
 

@@ -5,7 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/nxadm/tail"
 )
 
 /*
@@ -20,7 +25,7 @@ import (
 
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
-func getLines(num int, head bool, path string) ([]string, int, error) {
+func getLines(num int, startAtOffset, head bool, path string) ([]string, int, error) {
 	var total int
 	file, err := os.Open(path)
 	if err != nil {
@@ -40,17 +45,30 @@ func getLines(num int, head bool, path string) ([]string, int, error) {
 
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
+	var count = 0
 	for scanner.Scan() {
-		all = append(all, scanner.Text())
+		count++
+		if startAtOffset && head && count >= num {
+			all = append(all, scanner.Text())
+		} else if !startAtOffset {
+			all = append(all, scanner.Text())
+		}
 	}
 	if scanner.Err() != nil {
 		return []string{}, total, scanner.Err()
 	}
 
-	total = len(all)
+	total = count
 
+	// Exit now as we have what we need if we need head lines starting at offset
+	if head && startAtOffset {
+		return all, total, nil
+	}
+
+	// Make output slice at capacity we need
 	var lines = make([]string, 0, num)
 
+	// If we want first num lines
 	if head {
 		// Get the first lines instead of the last lines
 		if total >= num {
@@ -68,6 +86,7 @@ func getLines(num int, head bool, path string) ([]string, int, error) {
 				}
 			}
 		}
+		// If we want tail lines
 	} else {
 		// Get last num lines by iterating backwards
 		// Slightly more efficient to pre-allocate capacity to known value.
@@ -99,24 +118,95 @@ func getLines(num int, head bool, path string) ([]string, int, error) {
 
 func printHelp() {
 	fmt.Println("Print tail (or head) n lines of one or more files")
+	fmt.Println("Note: an -f option is not currently supported")
 	fmt.Println("Example: tail -n 10 file1.txt file2.txt")
 	flag.PrintDefaults()
 	os.Exit(0)
 }
+
+var linePrinter *printer
+
+func init() {
+	linePrinter = new(printer)
+	linePrinter.mu = new(sync.Mutex)
+}
+
+// FollowedFile a file being tailed (followed)
+type FollowedFile struct {
+	Path string
+	Tail *tail.Tail
+}
+
+type printer struct {
+	CurrentPath string
+	mu          *sync.Mutex
+}
+
+func (p *printer) print(path, line string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.CurrentPath == path {
+		fmt.Println(line)
+	} else {
+		fmt.Printf("==> File %s <==\n", path)
+		fmt.Println(line)
+	}
+}
+
+func (ff *FollowedFile) followFile() {
+	for line := range ff.Tail.Lines {
+		linePrinter.print(ff.Path, line.Text)
+	}
+}
+
+// NewTailedFileForPath create a new file that will start tailing
+func NewTailedFileForPath(path string) (*FollowedFile, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	// get the size
+	size := fi.Size()
+	si := tail.SeekInfo{Offset: size}
+	tf, err := tail.TailFile("", tail.Config{Follow: true, Location: &si})
+	if err != nil {
+		return nil, err
+	}
+
+	ff := FollowedFile{}
+	ff.Tail = tf
+	ff.Path = path
+
+	go ff.followFile()
+
+	return &ff, nil
+}
+
+// Option for following files that seems to be cross platform
+// https://github.com/nxadm/tail
 
 func main() {
 	var h bool
 	// Help flag
 	flag.BoolVar(&h, "h", false, "print usage")
 
+	// Flag for whetehr to start tail partway into a file
+	var startAtOffset bool
+
+	var follow bool
+	flag.BoolVar(&follow, "f", false, "follow new file lines")
+
+	// For later - number to use for head or tail or start at
 	var n int
+	// String for number to use for head or tail or to with offset
+	var nStr string
 	// Number of lines to print argument
-	flag.IntVar(&n, "n", 10, "number of lines")
+	flag.StringVar(&nStr, "n", "10", "number of lines - prefix '+' for head to start at line n")
 
 	var p bool
 	// Pretty printing flag
-	flag.BoolVar(&p, "p", false, "add formatting to output")
-	flag.BoolVar(&p, "pretty", false, "add formatting to output")
+	flag.BoolVar(&p, "p", false, "print extra formatting to output if more than one file is listed")
 
 	var printLines bool
 	// Pring line numbers flag
@@ -132,25 +222,92 @@ func main() {
 		printHelp()
 	}
 
+	justDigits, err := regexp.MatchString(`^[0-9]+$`, nStr)
+	if err != nil {
+		fmt.Println("got error", err)
+		printHelp()
+	}
+	if justDigits == false {
+		// Test for + prefix. Complain later if something else is wrong
+		if !strings.HasPrefix(nStr, "+") {
+			fmt.Println("invalid -n value", nStr)
+			printHelp()
+		}
+	}
+	// Deal selectively with offset
+	if !justDigits {
+		nStrOrig := nStr
+		nStr = nStr[1:]
+		// If we are in a head situation we will set the startAt flag
+		if head {
+			startAtOffset = true
+		}
+		// Ignore prefix if not a head request
+		var err error
+		// Invalid  somehow - for example +20a is not caught above but would be invalid
+		n, err = strconv.Atoi(nStr)
+		if err != nil {
+			fmt.Println("invalid -n value", nStrOrig)
+			printHelp()
+		}
+	} else {
+		var err error
+		// Extremely unlikely to have error as we've checked for all digits
+		n, err = strconv.Atoi(nStr)
+		if err != nil {
+			fmt.Println("invalid -n value", nStr)
+			printHelp()
+		}
+	}
+
+	var multiple bool
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
 	// Added total for more informative output.
 	var write = func(fname string, head bool, lines []string, total int) {
 		builder := new(strings.Builder)
-		headStr := "last"
+		strategyStr := "last"
 		if head {
-			headStr = "first"
+			if !startAtOffset {
+				strategyStr = "first"
+			}
 		}
-		if p == true {
+		if p == true && multiple {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 70)))
 		}
-		builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", fname, headStr, len(lines), total))
-		if p == true {
+		// head is also true
+		if startAtOffset {
+			if len(lines) == 0 {
+				extent := total
+				builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", fname, n, extent))
+			} else {
+				// The tail utility prints out filenames if there is more than one
+				// file. Do so here as well.
+				if multiple {
+					extent := len(lines) + n - 1
+					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", fname, n, extent))
+				}
+			}
+
+		} else {
+			// The tail utility prints out filenames if there is more than one
+			// file. Do so here as well.
+			if multiple {
+				builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", fname, strategyStr, len(lines), total))
+			}
+		}
+		if p == true && multiple {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 70)))
 		}
+		index := 0
 		for i := 0; i < len(lines); i++ {
 			if printLines == true {
-				builder.WriteString(fmt.Sprintf("%-3d %s\n", i+1, lines[i]))
+				if startAtOffset {
+					index = i + n
+				} else {
+					index = i + 1
+				}
+				builder.WriteString(fmt.Sprintf("%-3d %s\n", index, lines[i]))
 			} else {
 				builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
 			}
@@ -162,6 +319,8 @@ func main() {
 	// strings builder to prepare output. Strings builder avoids allocation.
 	args := flag.Args()
 
+	multiple = len(args) > 1
+
 	if len(args) == 0 {
 		fmt.Println("No files specified. Exiting with usage information")
 		fmt.Println()
@@ -169,7 +328,7 @@ func main() {
 	}
 
 	for i := 0; i < len(args); i++ {
-		lines, total, err := getLines(n, head, args[i])
+		lines, total, err := getLines(n, startAtOffset, head, args[i])
 		if err != nil {
 			// panic if something like a bad filename is used
 			panic(err)
