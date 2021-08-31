@@ -5,12 +5,15 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/nxadm/tail"
+	"github.com/nxadm/tail/ratelimiter"
 )
 
 /*
@@ -22,6 +25,70 @@ import (
 	The ideal implementation would use a buffer to read in just enough of each
 	file to satisfy the number of lines parameter.
 */
+
+var linePrinter *printer
+
+func init() {
+	linePrinter = new(printer)
+	linePrinter.wg = new(sync.WaitGroup)
+}
+
+// FollowedFile a file being tailed (followed)
+type FollowedFile struct {
+	Path string
+	Tail *tail.Tail
+	wg   *sync.WaitGroup
+}
+
+func (ff *FollowedFile) followFile() {
+	for line := range ff.Tail.Lines {
+		linePrinter.print(ff.Path, line.Text)
+	}
+}
+
+// NewTailedFileForPath create a new file that will start tailing
+func NewTailedFileForPath(path string) (*FollowedFile, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	// get the size
+	size := fi.Size()
+	si := tail.SeekInfo{Offset: size, Whence: 0}
+	lb := ratelimiter.NewLeakyBucket(100, 1*time.Millisecond)
+	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, Location: &si})
+	if err != nil {
+		return nil, err
+	}
+
+	ff := FollowedFile{}
+	ff.Tail = tf
+	ff.Path = path
+	ff.wg = new(sync.WaitGroup)
+
+	go ff.followFile()
+
+	return &ff, nil
+}
+
+type printer struct {
+	CurrentPath string
+	wg          *sync.WaitGroup
+}
+
+func (p *printer) print(path, line string) {
+	p.wg.Wait()
+	p.wg.Add(1)
+	defer p.wg.Done()
+
+	if p.CurrentPath == path {
+		fmt.Println(line)
+	} else {
+		p.CurrentPath = path
+		fmt.Printf("==> File %s <==\n", path)
+		fmt.Println(line)
+	}
+}
 
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
@@ -122,65 +189,6 @@ func printHelp() {
 	fmt.Println("Example: tail -n 10 file1.txt file2.txt")
 	flag.PrintDefaults()
 	os.Exit(0)
-}
-
-var linePrinter *printer
-
-func init() {
-	linePrinter = new(printer)
-	linePrinter.mu = new(sync.Mutex)
-}
-
-// FollowedFile a file being tailed (followed)
-type FollowedFile struct {
-	Path string
-	Tail *tail.Tail
-}
-
-type printer struct {
-	CurrentPath string
-	mu          *sync.Mutex
-}
-
-func (p *printer) print(path, line string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if p.CurrentPath == path {
-		fmt.Println(line)
-	} else {
-		fmt.Printf("==> File %s <==\n", path)
-		fmt.Println(line)
-	}
-}
-
-func (ff *FollowedFile) followFile() {
-	for line := range ff.Tail.Lines {
-		linePrinter.print(ff.Path, line.Text)
-	}
-}
-
-// NewTailedFileForPath create a new file that will start tailing
-func NewTailedFileForPath(path string) (*FollowedFile, error) {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-	// get the size
-	size := fi.Size()
-	si := tail.SeekInfo{Offset: size}
-	tf, err := tail.TailFile("", tail.Config{Follow: true, Location: &si})
-	if err != nil {
-		return nil, err
-	}
-
-	ff := FollowedFile{}
-	ff.Tail = tf
-	ff.Path = path
-
-	go ff.followFile()
-
-	return &ff, nil
 }
 
 // Option for following files that seems to be cross platform
@@ -333,6 +341,23 @@ func main() {
 			// panic if something like a bad filename is used
 			panic(err)
 		}
+		if head == false {
+			_, err = NewTailedFileForPath(args[i])
+			if err != nil {
+				panic(err)
+			}
+		}
+
 		write(args[i], head, lines, total)
+		// ff.wg.Add(1)
+		// ff.followFile()
+		// defer ff.wg.Done()
+	}
+
+	if follow {
+		c := make(chan os.Signal)
+		signal.Notify(c, os.Interrupt)
+
+		<-c
 	}
 }
