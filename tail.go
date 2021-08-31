@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/nxadm/tail"
@@ -27,10 +28,16 @@ import (
 */
 
 var linePrinter *printer
+var currentFile *atomic.Value
 
 func init() {
+	// Instantiate our current file atomic value
+	currentFile = new(atomic.Value)
+	// We're storing a string so start that off
+	currentFile.Store("")
+
+	// Initialize our line printer
 	linePrinter = new(printer)
-	linePrinter.wg = new(sync.WaitGroup)
 }
 
 // FollowedFile a file being tailed (followed)
@@ -40,6 +47,7 @@ type FollowedFile struct {
 	wg   *sync.WaitGroup
 }
 
+// followFile follow a tailed file and call print when new lines come in
 func (ff *FollowedFile) followFile() {
 	for line := range ff.Tail.Lines {
 		linePrinter.print(ff.Path, line.Text)
@@ -71,20 +79,16 @@ func NewTailedFileForPath(path string) (*FollowedFile, error) {
 	return &ff, nil
 }
 
+// This could just be an atomic.Value but probably that's too restricted.
 type printer struct {
-	CurrentPath string
-	wg          *sync.WaitGroup
 }
 
+// print print lines from a followed file
 func (p *printer) print(path, line string) {
-	p.wg.Wait()
-	p.wg.Add(1)
-	defer p.wg.Done()
-
-	if p.CurrentPath == path {
+	if currentFile.Load().(string) == path {
 		fmt.Println(line)
 	} else {
-		p.CurrentPath = path
+		currentFile.Store(path)
 		fmt.Printf("==> File %s <==\n", path)
 		fmt.Println(line)
 	}
@@ -108,17 +112,22 @@ func getLines(num int, startAtOffset, head bool, path string) ([]string, int, er
 	// then shorten the output. Other algorithms would involve avoiding reading
 	// all the contents in by using a buffer or counting lines or some other
 	// technique.
-	var all []string
+	var all = make([]string, 0, num)
 
+	// Use reader to count lines but discard what is not needed.
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
 	var count = 0
 	for scanner.Scan() {
 		count++
-		if startAtOffset && head && count >= num {
-			all = append(all, scanner.Text())
-		} else if !startAtOffset {
-			all = append(all, scanner.Text())
+		if len(all) <= num {
+			if startAtOffset && head && count >= num {
+				all = append(all, scanner.Text())
+			} else if !startAtOffset {
+				all = append(all, scanner.Text())
+			}
+		} else {
+			all = all[1:]
 		}
 	}
 	if scanner.Err() != nil {
@@ -132,27 +141,33 @@ func getLines(num int, startAtOffset, head bool, path string) ([]string, int, er
 		return all, total, nil
 	}
 
+	var lines []string
+	if head {
+		lines = all
+	} else {
+		lines = make([]string, 0, num)
+	}
 	// Make output slice at capacity we need
-	var lines = make([]string, 0, num)
 
 	// If we want first num lines
 	if head {
-		// Get the first lines instead of the last lines
-		if total >= num {
-			for i := 0; i < num; i++ {
-				lines = append(lines, all[i])
-				if len(lines) == num {
-					break
-				}
-			}
-		} else {
-			for i := 0; i < total; i++ {
-				lines = append(lines, all[i])
-				if len(lines) == num {
-					break
-				}
-			}
-		}
+		lines = all
+		// // Get the first lines instead of the last lines
+		// if total >= num {
+		// 	for i := 0; i < num; i++ {
+		// 		lines = append(lines, all[i])
+		// 		if len(lines) == num {
+		// 			break
+		// 		}
+		// 	}
+		// } else {
+		// 	for i := 0; i < total; i++ {
+		// 		lines = append(lines, all[i])
+		// 		if len(lines) == num {
+		// 			break
+		// 		}
+		// 	}
+		// }
 		// If we want tail lines
 	} else {
 		// Get last num lines by iterating backwards
@@ -349,9 +364,6 @@ func main() {
 		}
 
 		write(args[i], head, lines, total)
-		// ff.wg.Add(1)
-		// ff.followFile()
-		// defer ff.wg.Done()
 	}
 
 	if follow && !head {
