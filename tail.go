@@ -341,7 +341,7 @@ func main() {
 			// panic if something like a bad filename is used
 			panic(err)
 		}
-		if head == false {
+		if !head && follow {
 			_, err = NewTailedFileForPath(args[i])
 			if err != nil {
 				panic(err)
@@ -354,7 +354,7 @@ func main() {
 		// defer ff.wg.Done()
 	}
 
-	if follow {
+	if follow && !head {
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt)
 
