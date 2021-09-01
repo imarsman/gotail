@@ -30,6 +30,14 @@ import (
 	resources. This is mostly a test.
 
 	One thing that could be added is to take in data from stdin.
+
+	// Regular tail
+	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | tail -n +100 >/dev/null
+	real    0m0.308s
+
+	// This tail
+	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | ./tail -H -n +100 >/dev/null
+	real    0m0.048
 */
 
 var linePrinter *printer      // A struct to handle printing lines
@@ -293,10 +301,6 @@ func main() {
 	if !justDigits {
 		nStrOrig := nStr
 		nStr = nStr[1:]
-		// If we are in a head situation we will set the startAt flag
-		if head {
-			startAtOffset = true
-		}
 		// Ignore prefix if not a head request
 		var err error
 		// Invalid  somehow - for example +20a is not caught above but would be invalid
@@ -306,6 +310,9 @@ func main() {
 			fmt.Fprintln(out, gchalk.BrightRed("Invalid -n value", nStrOrig, ". Exiting with usage information."))
 			printHelp(out)
 		}
+		// Assume head if we got an offset
+		head = true
+		startAtOffset = true
 	} else {
 		var err error
 		// Extremely unlikely to have error as we've checked for all digits
@@ -341,8 +348,7 @@ func main() {
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				extent := total
-				builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent))
+				builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
@@ -357,13 +363,10 @@ func main() {
 			if len(lines) == 0 && multipleFiles {
 				builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", path, strategyStr, len(lines), total))
 			} else {
-				// fmt.Println("total", total)
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
-					extent := total
-					// extent := len(lines) + n - 1
-					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent))
+					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total))
 				}
 			}
 		}
