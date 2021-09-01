@@ -376,7 +376,7 @@ func main() {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		lines, total, err := getLines("", head, startAtOffset, n)
 		if err != nil {
-			// panic if something like a bad filename is used
+			// panic if something went wrong
 			panic(err)
 		}
 
