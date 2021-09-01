@@ -335,6 +335,7 @@ func main() {
 
 	var followedFiles = make([]*followedFile, 0, len(args))
 
+	var first bool = true
 	// Iterate through file path args
 	for i := 0; i < len(args); i++ {
 		lines, total, err := getLines(n, startAtOffset, head, args[i])
@@ -350,6 +351,12 @@ func main() {
 			}
 		}
 
+		// This is what the tail command does - leave a space before file name
+		if first == true {
+			fmt.Println("")
+		} else {
+			first = false
+		}
 		write(args[i], head, lines, total)
 	}
 
