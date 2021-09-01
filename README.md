@@ -38,6 +38,22 @@ app does not use embedding, which appeared in Go 1.16.
 
 `go build tail.go`
 
+To build for Windows, for which there is an existing equivalent whose syntax I
+always forget. 
+
+`GOOS=windows GOOARCH=amd64 go build -o tail-windows .`
+
+FYI the Windows command is:
+
+`Get-Content <filename> -Wait -Tail 30`
+
+I have not tested the follow part on Windows. This app uses a follow library and
+keeping track of files that get appended to is done idiosynchratically on
+Windows. If there is an issue the tail package allows for a different strategy
+to be used for tracking file changes. I could add in support for handling that.
+The app works well on MacOS, though the built in tail command is ridiculously
+small and efficient.
+
 If you don't provide the file to compile the built app will be named whatever
 the directory from the repository is named. In this case the app would be
 compiled to be named `Ian-Challenge`. 
