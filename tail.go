@@ -55,8 +55,8 @@ func (ff *FollowedFile) followFile() {
 	}
 }
 
-// NewTailedFileForPath create a new file that will start tailing
-func NewTailedFileForPath(path string) (*FollowedFile, error) {
+// NewFollowedFileForPath create a new file that will start tailing
+func NewFollowedFileForPath(path string) (*FollowedFile, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,8 @@ func getLines(num int, startAtOffset, head bool, path string) ([]string, int, er
 }
 
 func printHelp() {
-	fmt.Println(gchalk.BrightGreen("tail - a simple tail program"))
+	fmt.Println(gchalk.BrightGreen(os.Args[0], "- a simple tail program"))
+	fmt.Println("Usage")
 	fmt.Println("- print tail (or head) n lines of one or more files")
 	fmt.Println("Example: tail -n 10 file1.txt file2.txt")
 	flag.PrintDefaults()
@@ -208,7 +209,7 @@ func main() {
 	flag.Parse()
 
 	if head && follow {
-		fmt.Println(gchalk.BrightYellow("Can't use -H and -f together"))
+		fmt.Println(gchalk.BrightRed("Can't use -H and -f together. Exiting with usage information."))
 		printHelp()
 	}
 
@@ -218,13 +219,13 @@ func main() {
 
 	justDigits, err := regexp.MatchString(`^[0-9]+$`, nStr)
 	if err != nil {
-		fmt.Println(gchalk.BrightYellow("Got error", err.Error()))
+		fmt.Println(gchalk.BrightRed("Got error", err.Error()))
 		printHelp()
 	}
 	if justDigits == false {
 		// Test for + prefix. Complain later if something else is wrong
 		if !strings.HasPrefix(nStr, "+") {
-			fmt.Println(gchalk.BrightYellow("Invalid -n value", nStr))
+			fmt.Println(gchalk.BrightRed("Invalid -n value", nStr, ". Exiting with usage information."))
 			printHelp()
 		}
 	}
@@ -241,7 +242,7 @@ func main() {
 		// Invalid  somehow - for example +20a is not caught above but would be invalid
 		n, err = strconv.Atoi(nStr)
 		if err != nil {
-			fmt.Println(gchalk.BrightYellow("Invalid -n value", nStrOrig))
+			fmt.Println(gchalk.BrightRed("Invalid -n value", nStrOrig, ". Exiting with usage information."))
 			printHelp()
 		}
 	} else {
@@ -249,12 +250,12 @@ func main() {
 		// Extremely unlikely to have error as we've checked for all digits
 		n, err = strconv.Atoi(nStr)
 		if err != nil {
-			fmt.Println(gchalk.BrightYellow("invalid -n value", nStr))
+			fmt.Println(gchalk.BrightRed("invalid -n value", nStr, ". Exiting with usage information."))
 			printHelp()
 		}
 	}
 
-	var multiple bool
+	var multipleFiles bool
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
 	// Added total for more informative output.
@@ -266,7 +267,7 @@ func main() {
 				strategyStr = "first"
 			}
 		}
-		if p == true && multiple {
+		if p == true && multipleFiles {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
 		}
 		// head is also true
@@ -277,7 +278,7 @@ func main() {
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
-				if multiple {
+				if multipleFiles {
 					extent := len(lines) + n - 1
 					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", fname, n, extent))
 				}
@@ -286,11 +287,11 @@ func main() {
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
-			if multiple {
+			if multipleFiles {
 				builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", fname, strategyStr, len(lines), total))
 			}
 		}
-		if p == true && multiple {
+		if p == true && multipleFiles {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
 		}
 		index := 0
@@ -313,10 +314,11 @@ func main() {
 	// strings builder to prepare output. Strings builder avoids allocation.
 	args := flag.Args()
 
-	multiple = len(args) > 1
+	// For printing out file information when > 1 file being processed
+	multipleFiles = len(args) > 1
 
 	if len(args) == 0 {
-		fmt.Println(gchalk.Red("No files specified. Exiting with usage information"))
+		fmt.Println(gchalk.BrightRed("No files specified. Exiting with usage information."))
 		printHelp()
 	}
 
@@ -327,7 +329,7 @@ func main() {
 			panic(err)
 		}
 		if !head && follow {
-			_, err = NewTailedFileForPath(args[i])
+			_, err = NewFollowedFileForPath(args[i])
 			if err != nil {
 				panic(err)
 			}
