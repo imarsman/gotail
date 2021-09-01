@@ -68,6 +68,12 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	size := fi.Size()
 	si := tail.SeekInfo{Offset: size, Whence: 0}
 	lb := ratelimiter.NewLeakyBucket(10, 1*time.Millisecond)
+
+	config := tail.Config{Follow: true, RateLimiter: lb, ReOpen: false, Location: &si}
+	if followTrack {
+		config.ReOpen = true
+	}
+
 	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
 	if err != nil {
 		return nil, err
@@ -182,6 +188,8 @@ func printHelp(out *os.File) {
 	os.Exit(0)
 }
 
+var followTrack bool
+
 // Option for following files that seems to be cross platform
 // https://github.com/nxadm/tail
 
@@ -194,8 +202,11 @@ func main() {
 	var startAtOffset bool
 
 	// Flag for following tailed files
+	flag.BoolVar(&followTrack, "F", false, "follow new file lines and track file changes.")
+
+	// Flag for following tailed files
 	var follow bool
-	flag.BoolVar(&follow, "f", false, "follow new file lines (currently handles reopened or renamed files)")
+	flag.BoolVar(&follow, "f", false, "follow new file lines. No change tracking.")
 
 	// For later - number to use for head or tail or start at
 	var n int
@@ -217,6 +228,11 @@ func main() {
 	flag.BoolVar(&head, "H", false, "print head of file rather than tail")
 
 	flag.Parse()
+
+	// Track file changes
+	if followTrack {
+		follow = true
+	}
 
 	if head && follow {
 		out := os.Stderr
