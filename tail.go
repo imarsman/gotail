@@ -67,7 +67,7 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	// get the size
 	size := fi.Size()
 	si := tail.SeekInfo{Offset: size, Whence: 0}
-	lb := ratelimiter.NewLeakyBucket(100, 1*time.Millisecond)
+	lb := ratelimiter.NewLeakyBucket(10, 1*time.Millisecond)
 	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
 	if err != nil {
 		return nil, err
