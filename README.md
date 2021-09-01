@@ -17,11 +17,14 @@ support for starting at an offset would be fun but is not implemented.
 The arguments are as follows:
 
  * `-H`	print head of file rather than tail
+   * fails with `-f` option
  * `-N`	show line numbers
  * `-f`	follow new file lines (currently handles reopened or renamed files)
+   * this will fail if the `-H` option is specified
  * `-h`	print usage
  * `-n` string
-   *	number of lines - prefix '+' for head to start at line n (default "10")
+   * number of lines - prefix `+` for head to start at line `-n` (default "10")
+   * when `-H` is used can prefix with `+` to start at `-n` lines into file
  * `-p`	print extra formatting to output if more than one file is listed
 
 
