@@ -45,6 +45,21 @@ func init() {
 	linePrinter = new(printer)
 }
 
+// This could just be an atomic.Value but probably that's too restricted.
+type printer struct {
+}
+
+// print print lines from a followed file
+func (p *printer) print(path, line string) {
+	if currentPath.Load().(string) == path {
+		fmt.Println(line)
+	} else {
+		currentPath.Store(path)
+		fmt.Printf("==> File %s <==\n", path)
+		fmt.Println(line)
+	}
+}
+
 // followedFile a file being tailed (followed)
 type followedFile struct {
 	path string
@@ -103,25 +118,13 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	return &ff, nil
 }
 
-// This could just be an atomic.Value but probably that's too restricted.
-type printer struct {
-}
-
-// print print lines from a followed file
-func (p *printer) print(path, line string) {
-	if currentPath.Load().(string) == path {
-		fmt.Println(line)
-	} else {
-		currentPath.Store(path)
-		fmt.Printf("==> File %s <==\n", path)
-		fmt.Println(line)
-	}
-}
-
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
 func getLines(path string, head, startAtOffset bool, num int) ([]string, int, error) {
 	total := 0
+
+	// Declare here to ensure that defer works as it should
+	var file *os.File
 
 	// Define scanner that will be used either with a file or with stdin
 	var scanner *bufio.Scanner
@@ -132,7 +135,9 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner = bufio.NewScanner(os.Stdin)
 	} else {
-		file, err := os.Open(path)
+		var err error
+
+		file, err = os.Open(path)
 		if err != nil {
 			return nil, total, err
 		}
@@ -159,7 +164,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 		if startAtOffset {
 			total = 1
 			for scanner.Scan() {
-				if total >= num {
+				if total > num {
 					lines = append(lines, scanner.Text())
 				}
 				total++
@@ -171,7 +176,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 		}
 		total = 0
 		for scanner.Scan() {
-			if total <= num {
+			if total < num {
 				lines = append(lines, scanner.Text())
 			}
 			total++
