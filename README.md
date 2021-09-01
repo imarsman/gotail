@@ -16,20 +16,14 @@ support for starting at an offset would be fun but is not implemented.
 
 The arguments are as follows:
 
-* `tail -h` print out summary usage information. This is also printed out if no
-  files are specified.
-* `tail <file>` prints the tail (last) 10 lines of the given file to standard out
-	* This supports absolute and relative unix file paths
-* `tail -H <file>` prints the head (first) lines of the file
-	* `tail -H <file> -n +10` print first lines starting +n lines into file
-* `tail -n number <file>` prints the tail (last) `number` lines of the file
-* `tail <file1> <file2> ...` prints the the tail (last) 10 lines of all the provided files
-* `tail <sample/*.txt> ...` prints the the tail (last) 10 lines of all matching files
-* `tail -n number <file1> <file2>` prints the tail (last) -n lines of all provided files
-* `tail -p <file1> <file2>` prints the tail (last) 10 lines of all provided files 
-  with extra formatting. Extra formatting only used if more than one file listed.
-* `tail -N <file>` prints with leading lines numbers the tail (last) 10 lines of
-  the given file to standard out with leading line numbering.
+ * `-H`	print head of file rather than tail
+ * `-N`	show line numbers
+ * `-f`	follow new file lines (currently handles reopened or renamed files)
+ * `-h`	print usage
+ * `-n` string
+   *	number of lines - prefix '+' for head to start at line n (default "10")
+ * `-p`	print extra formatting to output if more than one file is listed
+
 
 # Building and Running
 
