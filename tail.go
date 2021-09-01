@@ -97,7 +97,8 @@ func (p *printer) print(path, line string) {
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
 func getLines(num int, startAtOffset, head bool, path string) ([]string, int, error) {
-	var total int
+	total := 0
+
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, total, err
@@ -112,90 +113,54 @@ func getLines(num int, startAtOffset, head bool, path string) ([]string, int, er
 	// then shorten the output. Other algorithms would involve avoiding reading
 	// all the contents in by using a buffer or counting lines or some other
 	// technique.
-	var all = make([]string, 0, num)
+	var all = make([]string, 0, num*2)
 
 	// Use reader to count lines but discard what is not needed.
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
-	var count = 0
-	for scanner.Scan() {
-		count++
-		if len(all) <= num {
-			if startAtOffset && head && count >= num {
-				all = append(all, scanner.Text())
-			} else if !startAtOffset {
+
+	// Get head lines
+	if head {
+		if startAtOffset {
+			total = 1
+			for scanner.Scan() {
+				if total >= num {
+					all = append(all, scanner.Text())
+				}
+				total++
+			}
+			if scanner.Err() != nil {
+				return []string{}, total, scanner.Err()
+			}
+			return all, total, nil
+		}
+		total = 0
+		for scanner.Scan() {
+			if total <= num {
 				all = append(all, scanner.Text())
 			}
-		} else {
+			total++
+		}
+		if scanner.Err() != nil {
+			return []string{}, total, scanner.Err()
+		}
+		return all, total, nil
+	}
+
+	// Get tail lines
+	total = 0
+	for scanner.Scan() {
+		all = append(all, scanner.Text())
+		// If we have more than we need, remove first element
+		if total >= num {
 			all = all[1:]
 		}
+		total++
 	}
 	if scanner.Err() != nil {
 		return []string{}, total, scanner.Err()
 	}
-
-	total = count
-
-	// Exit now as we have what we need if we need head lines starting at offset
-	if head && startAtOffset {
-		return all, total, nil
-	}
-
-	var lines []string
-	if head {
-		lines = all
-	} else {
-		lines = make([]string, 0, num)
-	}
-	// Make output slice at capacity we need
-
-	// If we want first num lines
-	if head {
-		lines = all
-		// // Get the first lines instead of the last lines
-		// if total >= num {
-		// 	for i := 0; i < num; i++ {
-		// 		lines = append(lines, all[i])
-		// 		if len(lines) == num {
-		// 			break
-		// 		}
-		// 	}
-		// } else {
-		// 	for i := 0; i < total; i++ {
-		// 		lines = append(lines, all[i])
-		// 		if len(lines) == num {
-		// 			break
-		// 		}
-		// 	}
-		// }
-		// If we want tail lines
-	} else {
-		// Get last num lines by iterating backwards
-		// Slightly more efficient to pre-allocate capacity to known value.
-		for i := len(all) - 1; i > -1; i-- {
-			lines = append(lines, all[i])
-			if len(lines) == num {
-				break
-			}
-		}
-
-		// Another way to do it, which is easier to follow for me. Sample I found
-		// returned the slice but you don't need to do that with a slice when it is
-		// not being changed in size. As a rule, though, if the slice might be
-		// changed you can pass a pointer to it, though that makes it a bit more
-		// cumbersome syntactially. I dealt with it in terms of pointers to
-		// experiment with the contorted dereferencing.
-		var reverse = func(s *[]string) {
-			for i, j := 0, len(*s)-1; i < j; i, j = i+1, j-1 {
-				(*s)[i], (*s)[j] = (*s)[j], (*s)[i]
-			}
-		}
-
-		// Call the function just defined
-		reverse(&lines)
-	}
-
-	return lines, total, nil
+	return all, total, nil
 }
 
 func printHelp() {
