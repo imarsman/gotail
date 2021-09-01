@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jwalton/gchalk"
 	"github.com/nxadm/tail"
 	"github.com/nxadm/tail/ratelimiter"
 )
@@ -164,8 +165,8 @@ func getLines(num int, startAtOffset, head bool, path string) ([]string, int, er
 }
 
 func printHelp() {
-	fmt.Println("Print tail (or head) n lines of one or more files")
-	fmt.Println("Note: an -f option is not currently supported")
+	fmt.Println(gchalk.BrightGreen("tail - a simple tail program"))
+	fmt.Println("- print tail (or head) n lines of one or more files")
 	fmt.Println("Example: tail -n 10 file1.txt file2.txt")
 	flag.PrintDefaults()
 	os.Exit(0)
@@ -206,19 +207,24 @@ func main() {
 
 	flag.Parse()
 
+	if head && follow {
+		fmt.Println(gchalk.BrightYellow("Can't use -H and -f together"))
+		printHelp()
+	}
+
 	if h == true {
 		printHelp()
 	}
 
 	justDigits, err := regexp.MatchString(`^[0-9]+$`, nStr)
 	if err != nil {
-		fmt.Println("got error", err)
+		fmt.Println(gchalk.BrightYellow("Got error", err.Error()))
 		printHelp()
 	}
 	if justDigits == false {
 		// Test for + prefix. Complain later if something else is wrong
 		if !strings.HasPrefix(nStr, "+") {
-			fmt.Println("invalid -n value", nStr)
+			fmt.Println(gchalk.BrightYellow("Invalid -n value", nStr))
 			printHelp()
 		}
 	}
@@ -235,7 +241,7 @@ func main() {
 		// Invalid  somehow - for example +20a is not caught above but would be invalid
 		n, err = strconv.Atoi(nStr)
 		if err != nil {
-			fmt.Println("invalid -n value", nStrOrig)
+			fmt.Println(gchalk.BrightYellow("Invalid -n value", nStrOrig))
 			printHelp()
 		}
 	} else {
@@ -243,7 +249,7 @@ func main() {
 		// Extremely unlikely to have error as we've checked for all digits
 		n, err = strconv.Atoi(nStr)
 		if err != nil {
-			fmt.Println("invalid -n value", nStr)
+			fmt.Println(gchalk.BrightYellow("invalid -n value", nStr))
 			printHelp()
 		}
 	}
@@ -261,7 +267,7 @@ func main() {
 			}
 		}
 		if p == true && multiple {
-			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 70)))
+			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
 		}
 		// head is also true
 		if startAtOffset {
@@ -285,7 +291,7 @@ func main() {
 			}
 		}
 		if p == true && multiple {
-			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 70)))
+			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
 		}
 		index := 0
 		for i := 0; i < len(lines); i++ {
@@ -310,8 +316,7 @@ func main() {
 	multiple = len(args) > 1
 
 	if len(args) == 0 {
-		fmt.Println("No files specified. Exiting with usage information")
-		fmt.Println()
+		fmt.Println(gchalk.Red("No files specified. Exiting with usage information"))
 		printHelp()
 	}
 
