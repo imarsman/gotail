@@ -352,7 +352,7 @@ func main() {
 		}
 
 		// This is what the tail command does - leave a space before file name
-		if first == true {
+		if first == true && len(args) > 1 {
 			fmt.Println("")
 		} else {
 			first = false
