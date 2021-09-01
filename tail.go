@@ -64,8 +64,10 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	// get the size
+
+	// get the size for SeekInfo.
 	size := fi.Size()
+	// Set seek location in bytes, with reference to start of file.
 	si := tail.SeekInfo{Offset: size, Whence: 0}
 	lb := ratelimiter.NewLeakyBucket(10, 1*time.Millisecond)
 
@@ -229,7 +231,8 @@ func main() {
 
 	flag.Parse()
 
-	// Track file changes
+	// Track file changes. Set follow to true as well. followTrack is used
+	// elsewhere in the package where the tail process is set up.
 	if followTrack {
 		follow = true
 	}
