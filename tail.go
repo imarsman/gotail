@@ -272,13 +272,19 @@ func main() {
 		}
 	}
 
-	var multipleFiles bool // Are multiple files to be printed
+	// Get args not tied to defined parameters. They will be interpreted as file
+	// paths.
+	args := flag.Args()
+
+	// For printing out file information when > 1 file being processed
+	var multipleFiles = len(args) > 1 // Are multiple files to be printed
 
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
 	// Added total for more informative output.
 	var write = func(fname string, head bool, lines []string, total int) {
 		builder := new(strings.Builder)
+
 		strategyStr := "last"
 		if head {
 			if !startAtOffset {
@@ -288,6 +294,7 @@ func main() {
 		if p == true && multipleFiles {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
 		}
+
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 {
@@ -301,7 +308,6 @@ func main() {
 					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", fname, n, extent))
 				}
 			}
-
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
@@ -312,6 +318,7 @@ func main() {
 		if p == true && multipleFiles {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
 		}
+
 		index := 0
 		for i := 0; i < len(lines); i++ {
 			if printLines == true {
@@ -327,13 +334,6 @@ func main() {
 		}
 		fmt.Println(strings.TrimSpace(builder.String()))
 	}
-
-	// Iterate through list of files (the bits that are not flags), using a
-	// strings builder to prepare output. Strings builder avoids allocation.
-	args := flag.Args()
-
-	// For printing out file information when > 1 file being processed
-	multipleFiles = len(args) > 1
 
 	if len(args) == 0 {
 		out := os.Stderr
