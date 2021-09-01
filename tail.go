@@ -337,6 +337,7 @@ func main() {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
 		}
 
+		// fmt.Println("total", total)
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
@@ -356,10 +357,12 @@ func main() {
 			if len(lines) == 0 && multipleFiles {
 				builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", path, strategyStr, len(lines), total))
 			} else {
+				// fmt.Println("total", total)
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
-					extent := len(lines) + n - 1
+					extent := total
+					// extent := len(lines) + n - 1
 					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent))
 				}
 			}
