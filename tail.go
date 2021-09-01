@@ -120,8 +120,8 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
-func getLines(path string, head, startAtOffset bool, num int) ([]string, int, error) {
-	total := 0
+func getLines(path string, head, startAtOffset bool, total int) ([]string, int, error) {
+	totalLines := 0
 
 	// Declare here to ensure that defer works as it should
 	var file *os.File
@@ -139,7 +139,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 
 		file, err = os.Open(path)
 		if err != nil {
-			return nil, total, err
+			return nil, totalLines, err
 		}
 
 		// Deferring in case an error occurs
@@ -153,7 +153,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 	// then shorten the output. Other algorithms would involve avoiding reading
 	// lines the contents in by using a buffer or counting lines or some other
 	// technique.
-	var lines = make([]string, 0, num*2)
+	var lines = make([]string, 0, total*2)
 
 	// Use reader to count lines but discard what is not needed.
 	scanner.Split(bufio.ScanLines)
@@ -162,47 +162,47 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 	// Count all lines but only load what is requested into slice.
 	if head {
 		if startAtOffset {
-			total = 1
+			totalLines = 1
 			for scanner.Scan() {
-				if total >= num {
+				if totalLines >= total {
 					lines = append(lines, scanner.Text())
 				}
-				total++
+				totalLines++
 			}
 			if scanner.Err() != nil {
-				return []string{}, total, scanner.Err()
+				return []string{}, totalLines, scanner.Err()
 			}
-			return lines, total, nil
+			return lines, totalLines, nil
 		}
-		total = 0
+		totalLines = 0
 		for scanner.Scan() {
-			if total <= num {
+			if totalLines <= total {
 				lines = append(lines, scanner.Text())
 			}
-			total++
+			totalLines++
 		}
 		if scanner.Err() != nil {
-			return []string{}, total, scanner.Err()
+			return []string{}, totalLines, scanner.Err()
 		}
-		return lines, total, nil
+		return lines, totalLines, nil
 	}
 
 	// Get tail lines and return
-	total = 0
+	totalLines = 0
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 		// If we have more than we need, remove first element
-		if total >= num {
+		if totalLines >= total {
 			// Get rid of the first element to keep this a "last" slice
 			lines = lines[1:]
 		}
-		total++
+		totalLines++
 	}
 	if scanner.Err() != nil {
-		return []string{}, total, scanner.Err()
+		return []string{}, totalLines, scanner.Err()
 	}
 
-	return lines, total, nil
+	return lines, totalLines, nil
 }
 
 // printHelp print out simple help output
@@ -332,13 +332,14 @@ func main() {
 			}
 		}
 
+		// Skips for single file and stdin
 		if p == true && multipleFiles {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
 		}
 
 		// head is also true
 		if startAtOffset {
-			if len(lines) == 0 {
+			if len(lines) == 0 && multipleFiles {
 				extent := total
 				builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent))
 			} else {
@@ -352,8 +353,15 @@ func main() {
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
-			if multipleFiles {
+			if len(lines) == 0 && multipleFiles {
 				builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", path, strategyStr, len(lines), total))
+			} else {
+				// The tail utility prints out filenames if there is more than one
+				// file. Do so here as well.
+				if multipleFiles {
+					extent := len(lines) + n - 1
+					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent))
+				}
 			}
 		}
 		if p == true && multipleFiles {
@@ -385,6 +393,7 @@ func main() {
 			panic(err)
 		}
 
+		// write will
 		write("", head, lines, total)
 		os.Exit(0)
 	}
