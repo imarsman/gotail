@@ -164,7 +164,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 		if startAtOffset {
 			total = 1
 			for scanner.Scan() {
-				if total > num {
+				if total >= num {
 					lines = append(lines, scanner.Text())
 				}
 				total++
@@ -176,7 +176,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 		}
 		total = 0
 		for scanner.Scan() {
-			if total < num {
+			if total <= num {
 				lines = append(lines, scanner.Text())
 			}
 			total++
