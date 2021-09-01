@@ -27,7 +27,9 @@ import (
 	This app can also follow files as they are added to.
 
 	The native Unix implementation of tail is much smaller and uses less
-	resources. This is mostly a test..
+	resources. This is mostly a test.
+
+	One thing that could be added is to take in data from stdin.
 */
 
 var linePrinter *printer      // A struct to handle printing lines
@@ -52,8 +54,11 @@ type followedFile struct {
 
 // followFile follow a tailed file and call print when new lines come in
 func (ff *followedFile) followFile() {
+	// Wait for initial output to be done in main.
 	ff.wg.Wait()
+	// Use inotify or whatever the tail package used decides.
 	for line := range ff.tail.Lines {
+		// the printer makes sure to set the proper path heading as appropriate.
 		linePrinter.print(ff.path, line.Text)
 	}
 }
@@ -65,10 +70,13 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 		return nil, err
 	}
 
-	// get the size for SeekInfo.
+	// get the length of the file im bytes for SeekInfo.
 	size := fi.Size()
 	// Set seek location in bytes, with reference to start of file.
 	si := tail.SeekInfo{Offset: size, Whence: 0}
+
+	// Use leaky bucket algorithm to rate limit output.
+	// The setting used has not been tested.
 	lb := ratelimiter.NewLeakyBucket(10, 1*time.Millisecond)
 
 	config := tail.Config{Follow: true, RateLimiter: lb, ReOpen: false, Location: &si}
@@ -87,6 +95,9 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	ff.wg = new(sync.WaitGroup)
 	ff.wg.Add(1)
 
+	// Start the follow process as a go coroutine.
+	// Initially the follow waits for initial file to be finished for all files
+	// in main.
 	go ff.followFile()
 
 	return &ff, nil
