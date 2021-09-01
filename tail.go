@@ -68,7 +68,7 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	size := fi.Size()
 	si := tail.SeekInfo{Offset: size, Whence: 0}
 	lb := ratelimiter.NewLeakyBucket(100, 1*time.Millisecond)
-	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, Location: &si})
+	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
 	if err != nil {
 		return nil, err
 	}
@@ -192,8 +192,9 @@ func main() {
 	// Flag for whetehr to start tail partway into a file
 	var startAtOffset bool
 
+	// Flag for following tailed files
 	var follow bool
-	flag.BoolVar(&follow, "f", false, "follow new file lines")
+	flag.BoolVar(&follow, "f", false, "follow new file lines (currently handles reopened or renamed files)")
 
 	// For later - number to use for head or tail or start at
 	var n int
@@ -262,12 +263,6 @@ func main() {
 			fmt.Println(gchalk.BrightRed("invalid -n value", nStr, ". Exiting with usage information."))
 			printHelp()
 		}
-	}
-
-	// Handle conflicting head and offset settings
-	if head && startAtOffset {
-		fmt.Println(gchalk.BrightRed("Offset was specified but this is not handled for head. Exiting with usage information."))
-		printHelp()
 	}
 
 	var multipleFiles bool // Are multiple files to be printed
