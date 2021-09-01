@@ -172,11 +172,12 @@ func getLines(num int, startAtOffset, head bool, path string) ([]string, int, er
 }
 
 // printHelp print out simple help output
-func printHelp() {
-	fmt.Println(gchalk.BrightGreen(os.Args[0], "- a simple tail program"))
-	fmt.Println("Usage")
-	fmt.Println("- print tail (or head) n lines of one or more files")
-	fmt.Println("Example: tail -n 10 file1.txt file2.txt")
+func printHelp(out *os.File) {
+
+	fmt.Fprintln(out, gchalk.BrightGreen(os.Args[0], "- a simple tail program"))
+	fmt.Fprintln(out, "Usage")
+	fmt.Fprintln(out, "- print tail (or head) n lines of one or more files")
+	fmt.Fprintln(out, "Example: tail -n 10 file1.txt file2.txt")
 	flag.PrintDefaults()
 	os.Exit(0)
 }
@@ -218,24 +219,28 @@ func main() {
 	flag.Parse()
 
 	if head && follow {
-		fmt.Println(gchalk.BrightRed("Can't use -H and -f together. Exiting with usage information."))
-		printHelp()
+		out := os.Stderr
+		fmt.Fprintln(out, gchalk.BrightRed("Can't use -H and -f together. Exiting with usage information."))
+		printHelp(out)
 	}
 
 	if h == true {
-		printHelp()
+		out := os.Stdout
+		printHelp(out)
 	}
 
 	justDigits, err := regexp.MatchString(`^[0-9]+$`, nStr)
 	if err != nil {
-		fmt.Println(gchalk.BrightRed("Got error", err.Error()))
-		printHelp()
+		out := os.Stderr
+		fmt.Fprintln(out, gchalk.BrightRed("Got error", err.Error()))
+		printHelp(out)
 	}
 	if justDigits == false {
 		// Test for + prefix. Complain later if something else is wrong
 		if !strings.HasPrefix(nStr, "+") {
-			fmt.Println(gchalk.BrightRed("Invalid -n value", nStr, ". Exiting with usage information."))
-			printHelp()
+			out := os.Stderr
+			fmt.Fprintln(out, gchalk.BrightRed("Invalid -n value", nStr, ". Exiting with usage information."))
+			printHelp(out)
 		}
 	}
 
@@ -252,16 +257,18 @@ func main() {
 		// Invalid  somehow - for example +20a is not caught above but would be invalid
 		n, err = strconv.Atoi(nStr)
 		if err != nil {
-			fmt.Println(gchalk.BrightRed("Invalid -n value", nStrOrig, ". Exiting with usage information."))
-			printHelp()
+			out := os.Stderr
+			fmt.Fprintln(out, gchalk.BrightRed("Invalid -n value", nStrOrig, ". Exiting with usage information."))
+			printHelp(out)
 		}
 	} else {
 		var err error
 		// Extremely unlikely to have error as we've checked for all digits
 		n, err = strconv.Atoi(nStr)
 		if err != nil {
-			fmt.Println(gchalk.BrightRed("invalid -n value", nStr, ". Exiting with usage information."))
-			printHelp()
+			out := os.Stderr
+			fmt.Fprintln(out, gchalk.BrightRed("invalid -n value", nStr, ". Exiting with usage information."))
+			printHelp(out)
 		}
 	}
 
@@ -329,13 +336,13 @@ func main() {
 	multipleFiles = len(args) > 1
 
 	if len(args) == 0 {
-		fmt.Println(gchalk.BrightRed("No files specified. Exiting with usage information."))
-		printHelp()
+		out := os.Stderr
+		fmt.Fprintln(out, gchalk.BrightRed("No files specified. Exiting with usage information."))
+		printHelp(out)
 	}
 
 	var followedFiles = make([]*followedFile, 0, len(args))
 
-	var first bool = true
 	// Iterate through file path args
 	for i := 0; i < len(args); i++ {
 		lines, total, err := getLines(n, startAtOffset, head, args[i])
@@ -352,10 +359,8 @@ func main() {
 		}
 
 		// This is what the tail command does - leave a space before file name
-		if first == true && len(args) > 1 {
+		if i > 0 && len(args) > 1 {
 			fmt.Println("")
-		} else {
-			first = false
 		}
 		write(args[i], head, lines, total)
 	}
