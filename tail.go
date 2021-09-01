@@ -21,42 +21,45 @@ import (
 /*
 	This app takes a number of lines argument, a "pretty" argument for more
 	illustrative output, and a list of paths to files, and for each file gathers
-	the number of lines requested, if available, and then prints them out to
-	standard out.
+	the number of lines requested from the tail or the head of the file's lines,
+	if available, and then prints them out to standard out.
 
-	The ideal implementation would use a buffer to read in just enough of each
-	file to satisfy the number of lines parameter.
+	This app can also follow files as they are added to.
+
+	The native Unix implementation of tail is much smaller and uses less
+	resources. This is mostly a test..
 */
 
-var linePrinter *printer
-var currentFile *atomic.Value
+var linePrinter *printer      // A struct to handle printing lines
+var currentPath *atomic.Value // The path for the current file
 
 func init() {
 	// Instantiate our current file atomic value
-	currentFile = new(atomic.Value)
+	currentPath = new(atomic.Value)
 	// We're storing a string so start that off
-	currentFile.Store("")
+	currentPath.Store("")
 
 	// Initialize our line printer
 	linePrinter = new(printer)
 }
 
-// FollowedFile a file being tailed (followed)
-type FollowedFile struct {
-	Path string
-	Tail *tail.Tail
+// followedFile a file being tailed (followed)
+type followedFile struct {
+	path string
+	tail *tail.Tail
 	wg   *sync.WaitGroup
 }
 
 // followFile follow a tailed file and call print when new lines come in
-func (ff *FollowedFile) followFile() {
-	for line := range ff.Tail.Lines {
-		linePrinter.print(ff.Path, line.Text)
+func (ff *followedFile) followFile() {
+	ff.wg.Wait()
+	for line := range ff.tail.Lines {
+		linePrinter.print(ff.path, line.Text)
 	}
 }
 
-// NewFollowedFileForPath create a new file that will start tailing
-func NewFollowedFileForPath(path string) (*FollowedFile, error) {
+// newFollowedFileForPath create a new file that will start tailing
+func newFollowedFileForPath(path string) (*followedFile, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -70,10 +73,11 @@ func NewFollowedFileForPath(path string) (*FollowedFile, error) {
 		return nil, err
 	}
 
-	ff := FollowedFile{}
-	ff.Tail = tf
-	ff.Path = path
+	ff := followedFile{}
+	ff.tail = tf
+	ff.path = path
 	ff.wg = new(sync.WaitGroup)
+	ff.wg.Add(1)
 
 	go ff.followFile()
 
@@ -86,10 +90,10 @@ type printer struct {
 
 // print print lines from a followed file
 func (p *printer) print(path, line string) {
-	if currentFile.Load().(string) == path {
+	if currentPath.Load().(string) == path {
 		fmt.Println(line)
 	} else {
-		currentFile.Store(path)
+		currentPath.Store(path)
 		fmt.Printf("==> File %s <==\n", path)
 		fmt.Println(line)
 	}
@@ -110,60 +114,64 @@ func getLines(num int, startAtOffset, head bool, path string) ([]string, int, er
 
 	// A bit inefficient as whole file is read in then out again in reverse
 	// order up to num.
-	// Since we will have to get the last items we have to read all lines in
+	// Since we will have to get the last items we have to read lines lines in
 	// then shorten the output. Other algorithms would involve avoiding reading
-	// all the contents in by using a buffer or counting lines or some other
+	// lines the contents in by using a buffer or counting lines or some other
 	// technique.
-	var all = make([]string, 0, num*2)
+	var lines = make([]string, 0, num*2)
 
 	// Use reader to count lines but discard what is not needed.
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
 
-	// Get head lines
+	// Get head lines and return
+	// Count all lines but only load what is requested into slice.
 	if head {
 		if startAtOffset {
 			total = 1
 			for scanner.Scan() {
 				if total >= num {
-					all = append(all, scanner.Text())
+					lines = append(lines, scanner.Text())
 				}
 				total++
 			}
 			if scanner.Err() != nil {
 				return []string{}, total, scanner.Err()
 			}
-			return all, total, nil
+			return lines, total, nil
 		}
 		total = 0
 		for scanner.Scan() {
 			if total <= num {
-				all = append(all, scanner.Text())
+				lines = append(lines, scanner.Text())
 			}
 			total++
 		}
 		if scanner.Err() != nil {
 			return []string{}, total, scanner.Err()
 		}
-		return all, total, nil
+		return lines, total, nil
 	}
 
-	// Get tail lines
+	// Get tail lines and return
 	total = 0
 	for scanner.Scan() {
-		all = append(all, scanner.Text())
+		lines = append(lines, scanner.Text())
 		// If we have more than we need, remove first element
 		if total >= num {
-			all = all[1:]
+			// Get rid of the first element to keep this a "last" slice
+			lines = lines[1:]
 		}
 		total++
 	}
 	if scanner.Err() != nil {
 		return []string{}, total, scanner.Err()
 	}
-	return all, total, nil
+
+	return lines, total, nil
 }
 
+// printHelp print out simple help output
 func printHelp() {
 	fmt.Println(gchalk.BrightGreen(os.Args[0], "- a simple tail program"))
 	fmt.Println("Usage")
@@ -229,6 +237,7 @@ func main() {
 			printHelp()
 		}
 	}
+
 	// Deal selectively with offset
 	if !justDigits {
 		nStrOrig := nStr
@@ -255,7 +264,14 @@ func main() {
 		}
 	}
 
-	var multipleFiles bool
+	// Handle conflicting head and offset settings
+	if head && startAtOffset {
+		fmt.Println(gchalk.BrightRed("Offset was specified but this is not handled for head. Exiting with usage information."))
+		printHelp()
+	}
+
+	var multipleFiles bool // Are multiple files to be printed
+
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
 	// Added total for more informative output.
@@ -322,6 +338,9 @@ func main() {
 		printHelp()
 	}
 
+	var followedFiles = make([]*followedFile, 0, len(args))
+
+	// Iterate through file path args
 	for i := 0; i < len(args); i++ {
 		lines, total, err := getLines(n, startAtOffset, head, args[i])
 		if err != nil {
@@ -329,7 +348,8 @@ func main() {
 			panic(err)
 		}
 		if !head && follow {
-			_, err = NewFollowedFileForPath(args[i])
+			ff, err := newFollowedFileForPath(args[i])
+			followedFiles = append(followedFiles, ff)
 			if err != nil {
 				panic(err)
 			}
@@ -338,6 +358,14 @@ func main() {
 		write(args[i], head, lines, total)
 	}
 
+	// Release waitgroup for each file being followed. This allows waiting until
+	// initial tail lines printed.
+	// No items will result in nothing done
+	for _, ff := range followedFiles {
+		ff.wg.Done()
+	}
+
+	// Wait to exit if files being followed
 	if follow && !head {
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt)
