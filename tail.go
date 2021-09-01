@@ -120,16 +120,27 @@ func (p *printer) print(path, line string) {
 
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
-func getLines(num int, startAtOffset, head bool, path string) ([]string, int, error) {
+func getLines(path string, head, startAtOffset bool, num int) ([]string, int, error) {
 	total := 0
 
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, total, err
-	}
+	// Define scanner that will be used either with a file or with stdin
+	var scanner *bufio.Scanner
 
-	// Deferring in case an error occurs
-	defer file.Close()
+	// Use stdin if it is available
+	// path will be ignored.
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		scanner = bufio.NewScanner(os.Stdin)
+	} else {
+		file, err := os.Open(path)
+		if err != nil {
+			return nil, total, err
+		}
+
+		// Deferring in case an error occurs
+		defer file.Close()
+		scanner = bufio.NewScanner(file)
+	}
 
 	// A bit inefficient as whole file is read in then out again in reverse
 	// order up to num.
@@ -140,7 +151,6 @@ func getLines(num int, startAtOffset, head bool, path string) ([]string, int, er
 	var lines = make([]string, 0, num*2)
 
 	// Use reader to count lines but discard what is not needed.
-	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
 
 	// Get head lines and return
@@ -302,17 +312,12 @@ func main() {
 		}
 	}
 
-	// Get args not tied to defined parameters. They will be interpreted as file
-	// paths.
-	args := flag.Args()
-
-	// For printing out file information when > 1 file being processed
-	var multipleFiles = len(args) > 1 // Are multiple files to be printed
+	var multipleFiles bool
 
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
 	// Added total for more informative output.
-	var write = func(fname string, head bool, lines []string, total int) {
+	var write = func(path string, head bool, lines []string, total int) {
 		builder := new(strings.Builder)
 
 		strategyStr := "last"
@@ -330,20 +335,20 @@ func main() {
 		if startAtOffset {
 			if len(lines) == 0 {
 				extent := total
-				builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", fname, n, extent))
+				builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					extent := len(lines) + n - 1
-					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", fname, n, extent))
+					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent))
 				}
 			}
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
 			if multipleFiles {
-				builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", fname, strategyStr, len(lines), total))
+				builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", path, strategyStr, len(lines), total))
 			}
 		}
 		if p == true && multipleFiles {
@@ -366,6 +371,26 @@ func main() {
 		fmt.Println(strings.TrimSpace(builder.String()))
 	}
 
+	// Use stdin if available
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		lines, total, err := getLines("", head, startAtOffset, n)
+		if err != nil {
+			// panic if something like a bad filename is used
+			panic(err)
+		}
+
+		write("", head, lines, total)
+		os.Exit(0)
+	}
+
+	// Get args not tied to defined parameters. They will be interpreted as file
+	// paths.
+	args := flag.Args()
+
+	// For printing out file information when > 1 file being processed
+	multipleFiles = len(args) > 1 // Are multiple files to be printed
+
 	if len(args) == 0 {
 		out := os.Stderr
 		fmt.Fprintln(out, gchalk.BrightRed("No files specified. Exiting with usage information."))
@@ -376,7 +401,7 @@ func main() {
 
 	// Iterate through file path args
 	for i := 0; i < len(args); i++ {
-		lines, total, err := getLines(n, startAtOffset, head, args[i])
+		lines, total, err := getLines(args[i], head, startAtOffset, n)
 		if err != nil {
 			// panic if something like a bad filename is used
 			panic(err)
