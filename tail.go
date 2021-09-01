@@ -291,6 +291,7 @@ func main() {
 				strategyStr = "first"
 			}
 		}
+
 		if p == true && multipleFiles {
 			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
 		}
