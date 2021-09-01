@@ -24,7 +24,7 @@ The arguments are as follows:
  * `-h`	print usage
  * `-n` string
    * number of lines - prefix `+` for head to start at line `-n` (default "10")
-   * when `-H` is used can prefix with `+` to start at `-n` lines into file
+   * when `-H` is used can prefix with `+` (e.g. `-n +10`) to start at `-n` lines into file
  * `-p`	print extra formatting to output if more than one file is listed
 
 
