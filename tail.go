@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -118,13 +117,16 @@ func (p *printer) print(path, line string) {
 type followedFile struct {
 	path string
 	tail *tail.Tail
-	wg   *sync.WaitGroup
+	ch   chan (int)
 }
 
 // followFile follow a tailed file and call print when new lines come in
 func (ff *followedFile) followFile() {
 	// Wait for initial output to be done in main.
-	ff.wg.Wait()
+	// Just has to wait once then the followed file library will use its own
+	// channel or whatever to range over new lines.
+	<-ff.ch
+
 	// Use inotify or whatever the tail package used decides.
 	for line := range ff.tail.Lines {
 		// the printer makes sure to set the proper path heading as appropriate.
@@ -156,8 +158,10 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	if usePolling == true {
 		config.Poll = true
 	}
+
 	// fsnotify might not be as robust on Windows
 	// if runtime.GOOS == "windows" {
+	//	config.Poll = true
 	// }
 
 	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
@@ -168,8 +172,9 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	ff := followedFile{}
 	ff.tail = tf
 	ff.path = path
-	ff.wg = new(sync.WaitGroup)
-	ff.wg.Add(1)
+
+	// make channel to use to wait for initial lines to be tailed
+	ff.ch = make(chan (int))
 
 	// Start the follow process as a go coroutine.
 	// Initially the follow waits for initial file to be finished for all files
@@ -535,11 +540,10 @@ func main() {
 		write(args[i], headFlag, lines, total)
 	}
 
-	// Release waitgroup for each file being followed. This allows waiting until
-	// initial tail lines printed.
-	// No items will result in nothing done
+	// Write to the channel for each followed file. The print function for
+	// followed files waits for a write to channel before it starts.
 	for _, ff := range followedFiles {
-		ff.wg.Done()
+		ff.ch <- 1
 	}
 
 	// Wait to exit if files being followed
