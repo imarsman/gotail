@@ -274,7 +274,7 @@ func getLines(path string, head, startAtOffset bool, total int) ([]string, int, 
 // printHelp print out simple help output
 func printHelp(out *os.File) {
 
-	fmt.Fprintln(out, colourOutput(brightGreen, os.Args[0], "- a simple tail program"))
+	fmt.Fprintln(out, colourOutput(brightGreen, os.Args[0], " - a simple tail program"))
 	fmt.Fprintln(out, "Usage")
 	fmt.Fprintln(out, "- print tail (or head) n lines of one or more files")
 	fmt.Fprintln(out, "Example: tail -n 10 file1.txt file2.txt")
