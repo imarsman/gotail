@@ -288,12 +288,12 @@ var followTrack bool
 // https://github.com/nxadm/tail
 
 func main() {
-	var h bool
+	var helpFlag bool
 	// Help flag
-	flag.BoolVar(&h, "h", false, "print usage")
+	flag.BoolVar(&helpFlag, "h", false, "print usage")
 
-	var noColour bool
-	flag.BoolVar(&noColour, "C", false, "no colour output")
+	var noColourFlag bool
+	flag.BoolVar(&noColourFlag, "C", false, "no colour output")
 
 	// Flag for whetehr to start tail partway into a file
 	var startAtOffset bool
@@ -304,52 +304,52 @@ func main() {
 	flag.BoolVar(&followTrack, "F", false, "follow new file lines and track file changes.")
 
 	// Flag for following tailed files
-	var follow bool
-	flag.BoolVar(&follow, "f", false, "follow new file lines. No change tracking.")
+	var followFlag bool
+	flag.BoolVar(&followFlag, "f", false, "follow new file lines. No change tracking.")
 
 	// For later - number to use for head or tail or start at
-	var n int
+	var numLines int
 	// String for number to use for head or tail or to with offset
-	var nStr string
+	var numLinesStr string
 	// Number of lines to print argument
-	flag.StringVar(&nStr, "n", "10", "number of lines - prefix '+' for head to start at line n")
+	flag.StringVar(&numLinesStr, "n", "10", "number of lines - prefix '+' for head to start at line n")
 
-	var p bool
+	var prettyFlag bool
 	// Pretty printing flag
-	flag.BoolVar(&p, "p", false, "print extra formatting to output if more than one file is listed")
+	flag.BoolVar(&prettyFlag, "p", false, "print extra formatting to output if more than one file is listed")
 
-	var printLines bool
+	var printLinesFlag bool
 	// Pring line numbers flag
-	flag.BoolVar(&printLines, "N", false, "show line numbers")
+	flag.BoolVar(&printLinesFlag, "N", false, "show line numbers")
 
-	var head bool
+	var headFlag bool
 	// Print head lines flag
-	flag.BoolVar(&head, "H", false, "print head of file rather than tail")
+	flag.BoolVar(&headFlag, "H", false, "print head of file rather than tail")
 
 	flag.Parse()
 
-	if noColour {
+	if noColourFlag {
 		useColour = false
 	}
 
 	// Track file changes. Set follow to true as well. followTrack is used
 	// elsewhere in the package where the tail process is set up.
 	if followTrack {
-		follow = true
+		followFlag = true
 	}
 
-	if head && follow {
+	if headFlag && followFlag {
 		out := os.Stderr
 		fmt.Fprintln(out, colourOutput(brightRed, "Can't use -H and -f together. Exiting with usage information."))
 		printHelp(out)
 	}
 
-	if h == true {
+	if helpFlag == true {
 		out := os.Stdout
 		printHelp(out)
 	}
 
-	justDigits, err := regexp.MatchString(`^[0-9]+$`, nStr)
+	justDigits, err := regexp.MatchString(`^[0-9]+$`, numLinesStr)
 	if err != nil {
 		out := os.Stderr
 		fmt.Fprintln(out, colourOutput(brightRed, "Got error", err.Error()))
@@ -357,36 +357,36 @@ func main() {
 	}
 	if justDigits == false {
 		// Test for + prefix. Complain later if something else is wrong
-		if !strings.HasPrefix(nStr, "+") {
+		if !strings.HasPrefix(numLinesStr, "+") {
 			out := os.Stderr
-			fmt.Fprintln(out, colourOutput(brightRed, "Invalid -n value", nStr, ". Exiting with usage information."))
+			fmt.Fprintln(out, colourOutput(brightRed, "Invalid -n value", numLinesStr, ". Exiting with usage information."))
 			printHelp(out)
 		}
 	}
 
 	// Deal selectively with offset
 	if !justDigits {
-		nStrOrig := nStr
-		nStr = nStr[1:]
+		nStrOrig := numLinesStr
+		numLinesStr = numLinesStr[1:]
 		// Ignore prefix if not a head request
 		var err error
 		// Invalid  somehow - for example +20a is not caught above but would be invalid
-		n, err = strconv.Atoi(nStr)
+		numLines, err = strconv.Atoi(numLinesStr)
 		if err != nil {
 			out := os.Stderr
 			fmt.Fprintln(out, colourOutput(brightRed, "Invalid -n value", nStrOrig, ". Exiting with usage information."))
 			printHelp(out)
 		}
 		// Assume head if we got an offset
-		head = true
+		headFlag = true
 		startAtOffset = true
 	} else {
 		var err error
 		// Extremely unlikely to have error as we've checked for all digits
-		n, err = strconv.Atoi(nStr)
+		numLines, err = strconv.Atoi(numLinesStr)
 		if err != nil {
 			out := os.Stderr
-			fmt.Fprintln(out, colourOutput(brightRed, "invalid -n value", nStr, ". Exiting with usage information."))
+			fmt.Fprintln(out, colourOutput(brightRed, "invalid -n value", numLinesStr, ". Exiting with usage information."))
 			printHelp(out)
 		}
 	}
@@ -399,60 +399,64 @@ func main() {
 	var write = func(path string, head bool, lines []string, total int) {
 		builder := new(strings.Builder)
 
-		strategyStr := "last"
+		strategyStr := "tail"
 		if head {
 			if !startAtOffset {
-				strategyStr = "first"
+				strategyStr = "head"
 			}
 		}
 
 		// Skips for single file and stdin
-		if p == true && multipleFiles {
+		if prettyFlag == true && multipleFiles {
 			builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, n, total)))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, numLines, total)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
-					extent := len(lines) + n - 1
-					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, n, extent)))
+					extent := len(lines) + numLines - 1
+					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, numLines, extent)))
 				}
 			}
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - %s %d of %d lines <==\n", path, strategyStr, len(lines), total)))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - %s of %d lines <==\n", path, strategyStr, len(lines))))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					if startAtOffset {
-						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, n, total)))
+						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, numLines, total)))
 					} else {
 						if head {
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d lines <==\n", path, n, total)))
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d lines <==\n", path, numLines, total)))
 						} else {
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - tail %d of %d lines <==\n", path, n, total)))
+							count := numLines
+							if numLines > total {
+								count = total
+							}
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - tail %d of %d lines <==\n", path, count, total)))
 						}
 					}
 				}
 			}
 		}
-		if p == true && multipleFiles {
+		if prettyFlag == true && multipleFiles {
 			builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
 		index := 0
 		for i := 0; i < len(lines); i++ {
-			if printLines == true {
+			if printLinesFlag == true {
 				if startAtOffset {
-					index = i + n
+					index = i + numLines
 				} else {
 					index = i + 1
 				}
@@ -473,14 +477,14 @@ func main() {
 	// Use stdin if available
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		lines, total, err := getLines("", head, startAtOffset, n)
+		lines, total, err := getLines("", headFlag, startAtOffset, numLines)
 		if err != nil {
 			// panic if something went wrong
 			panic(err)
 		}
 
 		// write to stdout
-		write("", head, lines, total)
+		write("", headFlag, lines, total)
 		os.Exit(0)
 	}
 
@@ -501,12 +505,12 @@ func main() {
 
 	// Iterate through file path args
 	for i := 0; i < len(args); i++ {
-		lines, total, err := getLines(args[i], head, startAtOffset, n)
+		lines, total, err := getLines(args[i], headFlag, startAtOffset, numLines)
 		if err != nil {
 			// panic if something like a bad filename is used
 			panic(err)
 		}
-		if !head && follow {
+		if !headFlag && followFlag {
 			ff, err := newFollowedFileForPath(args[i])
 			followedFiles = append(followedFiles, ff)
 			if err != nil {
@@ -518,7 +522,7 @@ func main() {
 		if i > 0 && len(args) > 1 {
 			fmt.Println()
 		}
-		write(args[i], head, lines, total)
+		write(args[i], headFlag, lines, total)
 	}
 
 	// Release waitgroup for each file being followed. This allows waiting until
@@ -529,7 +533,7 @@ func main() {
 	}
 
 	// Wait to exit if files being followed
-	if follow && !head {
+	if followFlag && !headFlag {
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt)
 
