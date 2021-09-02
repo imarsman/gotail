@@ -112,7 +112,8 @@ func (p *printer) print(path, line string) {
 		fmt.Println(line)
 	} else {
 		p.setPath(path)
-		fmt.Println(colourOutput(brightBlue, fmt.Sprintf("==> File %s <==", path)))
+		fmt.Println()
+		fmt.Println(colourOutput(brightBlue, fmt.Sprintf("==> %s <==", path)))
 		fmt.Println(line)
 	}
 }
@@ -403,31 +404,31 @@ func main() {
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total)))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, n, total)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					extent := len(lines) + n - 1
-					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent)))
+					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, n, extent)))
 				}
 			}
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", path, strategyStr, len(lines), total)))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - %s %d of %d lines <==\n", path, strategyStr, len(lines), total)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					if startAtOffset {
-						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total)))
+						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, n, total)))
 					} else {
 						if head {
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - head %d of %d lines <==\n", path, n, total)))
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d lines <==\n", path, n, total)))
 						} else {
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - tail %d of %d lines <==\n", path, n, total)))
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - tail %d of %d lines <==\n", path, n, total)))
 						}
 					}
 				}
