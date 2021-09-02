@@ -89,9 +89,6 @@ func (p *printer) getPath() string {
 // An atomic value would not stop situations where headers were printed in a
 // race condition even if the path was protected.
 func (p *printer) print(path, line string) {
-	// p.mu.Lock()
-	// defer p.mu.Unlock()
-
 	// If the current followed file's path is the same as the previous one used,
 	// don't print out a header.
 	if p.getPath() == path {
