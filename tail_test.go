@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"testing"
 )
 
@@ -81,4 +82,23 @@ func BenchmarkGetLines(b *testing.B) {
 	if err != nil {
 		b.Fail()
 	}
+}
+
+func BenchmarkPrintLines(b *testing.B) {
+	printer := newPrinter()
+	origOut := os.Stdout
+	// Disable stdout for benchmark
+	os.Stdout = nil
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			printer.print("path/file.xt", "hello")
+		}
+	})
+
+	// Re-enable stdout
+	os.Stdout = origOut
 }
