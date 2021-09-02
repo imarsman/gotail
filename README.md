@@ -29,6 +29,7 @@ The arguments are as follows:
  * `-N`	show line numbers
  * `-H`	print head of file rather than tail
    * fails with `-f` option
+ * `-O`	use periodic polling of files rather than file system events (slower)
 
 
 # Building and Running

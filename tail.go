@@ -298,7 +298,7 @@ func main() {
 	// Flag for whetehr to start tail partway into a file
 	var startAtOffset bool
 
-	flag.BoolVar(&usePolling, "P", false, "use polling instead of OS file system events.")
+	flag.BoolVar(&usePolling, "P", false, "use polling instead of OS file system events (slower).")
 
 	// Flag for following tailed files
 	flag.BoolVar(&followTrack, "F", false, "follow new file lines and track file changes.")
