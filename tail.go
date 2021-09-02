@@ -18,6 +18,13 @@ import (
 	"github.com/nxadm/tail/ratelimiter"
 )
 
+const (
+	brightGreen = iota
+	brightYellow
+	brightBlue
+	brightRed
+)
+
 /*
 	This app takes a number of lines argument, a "pretty" argument for more
 	illustrative output, and a list of paths to files, and for each file gathers
@@ -40,30 +47,72 @@ import (
 	real    0m0.048
 */
 
-var linePrinter *printer      // A struct to handle printing lines
-var currentPath *atomic.Value // The path for the current file
+var linePrinter *printer // A struct to handle printing lines
+
+var useColour = true
 
 func init() {
-	// Instantiate our current file atomic value
-	currentPath = new(atomic.Value)
-	// We're storing a string so start that off
-	currentPath.Store("")
+	// // Instantiate our current file atomic value
+	// currentPath = new(atomic.Value)
+	// // We're storing a string so start that off
+	// currentPath.Store("")
 
+	linePrinter = newPrinter()
 	// Initialize our line printer
-	linePrinter = new(printer)
+	// linePrinter = new(printer)
+	// linePrinter.currentPath = new(atomic.Value)
+}
+
+func newPrinter() *printer {
+	p := new(printer)
+	p.currentPath = new(atomic.Value)
+	p.setPath("")
+
+	return p
 }
 
 // This could just be an atomic.Value but probably that's too restricted.
 type printer struct {
+	currentPath *atomic.Value
+}
+
+func (p *printer) setPath(path string) {
+	p.currentPath.Store(path)
+}
+
+func (p *printer) getPath() string {
+	return p.currentPath.Load().(string)
+}
+
+func colourOutput(colour int, input ...string) string {
+	str := fmt.Sprint(strings.Join(input, ""))
+
+	if !useColour {
+		return str
+	}
+
+	switch colour {
+	case brightGreen:
+		return gchalk.BrightGreen(str)
+	case brightYellow:
+		return gchalk.BrightYellow(str)
+	case brightBlue:
+		return gchalk.BrightBlue(str)
+	case brightRed:
+		return gchalk.BrightRed(str)
+	default:
+		return str
+	}
+
 }
 
 // print print lines from a followed file
 func (p *printer) print(path, line string) {
-	if currentPath.Load().(string) == path {
+	if p.getPath() == path {
 		fmt.Println(line)
 	} else {
-		currentPath.Store(path)
-		fmt.Printf("==> File %s <==\n", path)
+		p.setPath(path)
+		colourOutput(brightBlue, fmt.Sprintf("==> File %s <==\n", path))
 		fmt.Println(line)
 	}
 }
@@ -216,7 +265,7 @@ func getLines(path string, head, startAtOffset bool, total int) ([]string, int, 
 // printHelp print out simple help output
 func printHelp(out *os.File) {
 
-	fmt.Fprintln(out, gchalk.BrightGreen(os.Args[0], "- a simple tail program"))
+	fmt.Fprintln(out, colourOutput(brightGreen, os.Args[0], "- a simple tail program"))
 	fmt.Fprintln(out, "Usage")
 	fmt.Fprintln(out, "- print tail (or head) n lines of one or more files")
 	fmt.Fprintln(out, "Example: tail -n 10 file1.txt file2.txt")
@@ -233,6 +282,9 @@ func main() {
 	var h bool
 	// Help flag
 	flag.BoolVar(&h, "h", false, "print usage")
+
+	var noColour bool
+	flag.BoolVar(&noColour, "C", false, "no colour output")
 
 	// Flag for whetehr to start tail partway into a file
 	var startAtOffset bool
@@ -265,6 +317,10 @@ func main() {
 
 	flag.Parse()
 
+	if noColour {
+		useColour = false
+	}
+
 	// Track file changes. Set follow to true as well. followTrack is used
 	// elsewhere in the package where the tail process is set up.
 	if followTrack {
@@ -273,7 +329,7 @@ func main() {
 
 	if head && follow {
 		out := os.Stderr
-		fmt.Fprintln(out, gchalk.BrightRed("Can't use -H and -f together. Exiting with usage information."))
+		fmt.Fprintln(out, colourOutput(brightRed, "Can't use -H and -f together. Exiting with usage information."))
 		printHelp(out)
 	}
 
@@ -285,14 +341,14 @@ func main() {
 	justDigits, err := regexp.MatchString(`^[0-9]+$`, nStr)
 	if err != nil {
 		out := os.Stderr
-		fmt.Fprintln(out, gchalk.BrightRed("Got error", err.Error()))
+		fmt.Fprintln(out, colourOutput(brightRed, "Got error", err.Error()))
 		printHelp(out)
 	}
 	if justDigits == false {
 		// Test for + prefix. Complain later if something else is wrong
 		if !strings.HasPrefix(nStr, "+") {
 			out := os.Stderr
-			fmt.Fprintln(out, gchalk.BrightRed("Invalid -n value", nStr, ". Exiting with usage information."))
+			fmt.Fprintln(out, colourOutput(brightRed, "Invalid -n value", nStr, ". Exiting with usage information."))
 			printHelp(out)
 		}
 	}
@@ -307,7 +363,7 @@ func main() {
 		n, err = strconv.Atoi(nStr)
 		if err != nil {
 			out := os.Stderr
-			fmt.Fprintln(out, gchalk.BrightRed("Invalid -n value", nStrOrig, ". Exiting with usage information."))
+			fmt.Fprintln(out, colourOutput(brightRed, "Invalid -n value", nStrOrig, ". Exiting with usage information."))
 			printHelp(out)
 		}
 		// Assume head if we got an offset
@@ -319,7 +375,7 @@ func main() {
 		n, err = strconv.Atoi(nStr)
 		if err != nil {
 			out := os.Stderr
-			fmt.Fprintln(out, gchalk.BrightRed("invalid -n value", nStr, ". Exiting with usage information."))
+			fmt.Fprintln(out, colourOutput(brightRed, "invalid -n value", nStr, ". Exiting with usage information."))
 			printHelp(out)
 		}
 	}
@@ -341,37 +397,37 @@ func main() {
 
 		// Skips for single file and stdin
 		if p == true && multipleFiles {
-			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
+			builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
 		// fmt.Println("total", total)
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					extent := len(lines) + n - 1
-					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent))
+					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, extent)))
 				}
 			}
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", path, strategyStr, len(lines), total))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - %s %d of %d lines <==\n", path, strategyStr, len(lines), total)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
-					builder.WriteString(fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total))
+					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total)))
 				}
 			}
 		}
 		if p == true && multipleFiles {
-			builder.WriteString(fmt.Sprintf("%s\n", strings.Repeat("-", 80)))
+			builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
 		index := 0
@@ -413,7 +469,7 @@ func main() {
 
 	if len(args) == 0 {
 		out := os.Stderr
-		fmt.Fprintln(out, gchalk.BrightRed("No files specified. Exiting with usage information."))
+		fmt.Fprintln(out, colourOutput(brightRed, "No files specified. Exiting with usage information."))
 		printHelp(out)
 	}
 
