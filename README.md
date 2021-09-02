@@ -108,7 +108,5 @@ To see what the Go compiler does with the code type:
 
   `go build -gcflags '-m -m' ./*.go 2>&1 |less`
 
-Thank-you for this fun task and for taking the time to review my work on it.
-
 --
 Ian A. Marsman

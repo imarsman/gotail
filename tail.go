@@ -151,7 +151,7 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	// The setting used has not been tested.
 	lb := ratelimiter.NewLeakyBucket(10, 1*time.Millisecond)
 
-	config := tail.Config{Follow: true, RateLimiter: lb, ReOpen: false, Location: &si}
+	config := tail.Config{Follow: true, RateLimiter: lb, ReOpen: false, Poll: false, Location: &si}
 	if followTrack {
 		config.ReOpen = true
 	}
