@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"math/rand"
 	"os"
 	"testing"
 )
@@ -84,6 +86,7 @@ func BenchmarkGetLines(b *testing.B) {
 	}
 }
 
+// BenchmarkPrintLines benchmark line printing with a path change every call
 func BenchmarkPrintLines(b *testing.B) {
 	printer := newPrinter()
 	origOut := os.Stdout
@@ -95,7 +98,30 @@ func BenchmarkPrintLines(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			printer.print("path/file.xt", "hello")
+			// Change path on each run
+			r := rand.Intn(100)
+			s := fmt.Sprint(r)
+			printer.print(s, "hello")
+		}
+	})
+
+	// Re-enable stdout
+	os.Stdout = origOut
+}
+
+// BenchmarkPrintLinesWithNoPathChange benchmark line printing with no path changes
+func BenchmarkPrintLinesWithNoPathChange(b *testing.B) {
+	printer := newPrinter()
+	origOut := os.Stdout
+	// Disable stdout for benchmark
+	os.Stdout = nil
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			printer.print("", "hello")
 		}
 	})
 
