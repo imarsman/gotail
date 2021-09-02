@@ -173,7 +173,7 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 
 	// Start the follow process as a go coroutine.
 	// Initially the follow waits for initial file to be finished for all files
-	// in main.
+	// in main. Could use channels as well.
 	go ff.followFile()
 
 	return &ff, nil
@@ -190,8 +190,9 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string,
 	// Define scanner that will be used either with a file or with stdin
 	var scanner *bufio.Scanner
 
-	// Use stdin if it is available
-	// path will be ignored.
+	// Use stdin if it is available. Path will be ignored.
+	// Once scanner is defined as using stdin it will run the same way as it
+	// would with a file.
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner = bufio.NewScanner(os.Stdin)
@@ -208,43 +209,48 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string,
 		scanner = bufio.NewScanner(file)
 	}
 
-	// A bit inefficient as whole file is read in then out again in reverse
-	// order up to num.
-	// Since we will have to get the last items we have to read lines lines in
-	// then shorten the output. Other algorithms would involve avoiding reading
-	// lines the contents in by using a buffer or counting lines or some other
-	// technique.
-	var lines = make([]string, 0, linesWanted*2)
+	// The goal of the logic here is to allow for all lines in the input to be
+	// iterated through but to only save the ones we want. This avoids ballooning
+	// a slice to hold all of the lines in a large file then discarding almost
+	// all of them.
+	var lines = make([]string, 0, linesWanted)
 
-	// Use reader to count lines but discard what is not needed.
+	// Tell scanner to scan by lines.
 	scanner.Split(bufio.ScanLines)
 
 	// Get head lines and return
-	// Count all lines but only load what is requested into slice.
 	if head {
+		// Handle starting at offset, get lines, then return
 		if startAtOffset {
 			totalLines = 1
 			for scanner.Scan() {
+				// Add to lines slice when in range
 				if totalLines >= linesWanted {
 					lines = append(lines, scanner.Text())
 				}
 				totalLines++
 			}
+			// scanner keeps track of non-EOF error
 			if scanner.Err() != nil {
 				return []string{}, totalLines, scanner.Err()
 			}
+
 			return lines, totalLines, nil
 		}
+		// not starting at offset so get head lines
 		totalLines = 0
 		for scanner.Scan() {
+			// Add to lines slice when in range
 			if totalLines < linesWanted {
 				lines = append(lines, scanner.Text())
 			}
 			totalLines++
 		}
+		// scanner keeps track of non-EOF error
 		if scanner.Err() != nil {
 			return []string{}, totalLines, scanner.Err()
 		}
+
 		return lines, totalLines, nil
 	}
 
@@ -252,13 +258,14 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string,
 	totalLines = 0
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
-		// If we have more than we need, remove first element
-		if totalLines >= linesWanted {
+		totalLines++
+		// Add to lines slice when in range
+		if totalLines > linesWanted {
 			// Get rid of the first element to keep this a "last" slice
 			lines = lines[1:]
 		}
-		totalLines++
 	}
+	// scanner keeps track of non-EOF error
 	if scanner.Err() != nil {
 		return []string{}, totalLines, scanner.Err()
 	}
