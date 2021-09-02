@@ -233,7 +233,7 @@ func getLines(path string, head, startAtOffset bool, total int) ([]string, int, 
 		}
 		totalLines = 0
 		for scanner.Scan() {
-			if totalLines <= total {
+			if totalLines < total {
 				lines = append(lines, scanner.Text())
 			}
 			totalLines++
@@ -400,7 +400,6 @@ func main() {
 			builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
-		// fmt.Println("total", total)
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
@@ -422,7 +421,15 @@ func main() {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
-					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total)))
+					if startAtOffset {
+						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - starting at %d of %d lines <==\n", path, n, total)))
+					} else {
+						if head {
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - head %d of %d lines <==\n", path, n, total)))
+						} else {
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> File %s - tail %d of %d lines <==\n", path, n, total)))
+						}
+					}
 				}
 			}
 		}
@@ -440,10 +447,16 @@ func main() {
 				}
 				builder.WriteString(fmt.Sprintf("%-3d %s\n", index, lines[i]))
 			} else {
-				builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
+				if lines[i] == "" {
+					// Add newline for empty string
+					builder.WriteString("\n")
+				} else {
+					builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
+				}
 			}
 		}
-		fmt.Println(strings.TrimSpace(builder.String()))
+		// Don't add a newline
+		fmt.Print(builder.String())
 	}
 
 	// Use stdin if available
@@ -492,7 +505,7 @@ func main() {
 
 		// This is what the tail command does - leave a space before file name
 		if i > 0 && len(args) > 1 {
-			fmt.Println("")
+			fmt.Println()
 		}
 		write(args[i], head, lines, total)
 	}
