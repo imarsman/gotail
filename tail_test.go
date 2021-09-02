@@ -26,19 +26,26 @@ import (
 //  go tool pprof -http=:8080 cpuprofile.out
 
 /*
-	Interestingly, the naive implementation is faster than the official one. This
-	implemenation does not do useful things like follow a log that is having lines
-	added to it. That is a difficult thing to do cross-platform.
+	Interestingly, this implementation is faster than the official one. It tends
+	to use more CPU (0.1 vs 0.0) and is much larger though.
 
 	$: time tail -30 sample/*.txt >/dev/null
-	real	0m0.021s
-	user	0m0.009s
-	sys	    0m0.011s
+	real	0m0.031s
+	user	0m0.010s
+	sys	    0m0.014s
 
-	$: time ./tail -p -N -n 30 sample/*.txt >/dev/null
-	real	0m0.005s
+	$: time ./tail -n 30 sample/*.txt >/dev/null
+	real	0m0.006s
 	user	0m0.002s
-	sys	    0m0.002s
+	sys	    0m0.003s
+
+	Native tail does slightly better than this tail with stdin
+
+	$: time cat sample/1.txt|tail -n 10 >/dev/null
+	real    0m0.003s
+
+	$: time cat sample/1.txt|gotail -n 10 >/dev/null
+	real    0m0.006s
 */
 
 const (
