@@ -384,7 +384,7 @@ func main() {
 
 	var multipleFiles bool
 
-	var plural = func(singular, plural string, number int) string {
+	var pluralize = func(singular, plural string, number int) string {
 		if number == 1 {
 			return singular
 		}
@@ -412,45 +412,39 @@ func main() {
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				var plural = plural("line", "lines", total)
-				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, plural, total)))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", total), total)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
-					var plural = plural("line", "lines", total)
 					extent := len(lines) + numLines - 1
-					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, plural, extent)))
+					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", total), extent)))
 				}
 			}
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
 			if len(lines) == 0 && multipleFiles {
-				var plural = plural("line", "lines", len(lines))
-				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), plural)))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), pluralize("line", "lines", len(lines)))))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					if startAtOffset {
-						var plural = plural("line", "lines", total)
-						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, total, plural)))
+						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, total, pluralize("line", "lines", total))))
 					} else {
 						if head {
 							count := numLines
 							if numLines > total {
 								count = total
 							}
-							var plural = plural("line", "lines", total)
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, total, plural)))
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, total, pluralize("line", "lines", total))))
 						} else {
 							count := numLines
 							if numLines > total {
 								count = total
 							}
-							var plural = plural("line", "lines", total)
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, total, plural)))
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, total, pluralize("line", "lines", total))))
 						}
 					}
 				}
