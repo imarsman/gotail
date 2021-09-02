@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/jwalton/gchalk"
@@ -59,53 +59,40 @@ func init() {
 // newPrinter get new printer instance properly instantiated
 func newPrinter() *printer {
 	p := new(printer)
-	p.currentPath = new(atomic.Value) // initialize atomic value
-	p.setPath("")                     // Fails if not initialized
+	p.currentPath = "" // initialize atomic value
+	p.setPath("")      // Fails if not initialized
+	p.mu = new(sync.Mutex)
 
 	return p
 }
 
-// This could just be an atomic.Value but probably that's too restricted.
+// A printer is a central place for printing new lines.
 type printer struct {
-	currentPath *atomic.Value
+	currentPath string
+	mu          *sync.Mutex
 }
 
 func (p *printer) setPath(path string) {
-	p.currentPath.Store(path)
+	p.currentPath = path
 }
 
 func (p *printer) getPath() string {
-	return p.currentPath.Load().(string)
-}
-
-func colourOutput(colour int, input ...string) string {
-	str := fmt.Sprint(strings.Join(input, " "))
-	str = strings.Replace(str, "  ", " ", -1)
-
-	if !useColour {
-		return str
-	}
-
-	switch colour {
-	case brightGreen:
-		return gchalk.BrightGreen(str)
-	case brightYellow:
-		return gchalk.BrightYellow(str)
-	case brightBlue:
-		return gchalk.BrightBlue(str)
-	case brightRed:
-		return gchalk.BrightRed(str)
-	default:
-		return str
-	}
-
+	return p.currentPath
 }
 
 // print print lines from a followed file
+// An atomic value would not stop situations where headers were printed in a
+// race condition even if the path was protected.
 func (p *printer) print(path, line string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// If the current followed file's path is the same as the previous one used,
+	// don't print out a header.
 	if p.getPath() == path {
 		fmt.Println(line)
 	} else {
+		// Print out a header and set new value for the path.
 		p.setPath(path)
 		fmt.Println()
 		fmt.Println(colourOutput(brightBlue, fmt.Sprintf("==> %s <==", path)))
@@ -114,24 +101,12 @@ func (p *printer) print(path, line string) {
 }
 
 // followedFile a file being tailed (followed)
+// Uses the tail library which has undoubtedly taken many hours to get working
+// well.
 type followedFile struct {
 	path string
 	tail *tail.Tail
 	ch   chan (int)
-}
-
-// followFile follow a tailed file and call print when new lines come in
-func (ff *followedFile) followFile() {
-	// Wait for initial output to be done in main.
-	// Just has to wait once then the followed file library will use its own
-	// channel or whatever to range over new lines.
-	<-ff.ch
-
-	// Use inotify or whatever the tail package used decides.
-	for line := range ff.tail.Lines {
-		// the printer makes sure to set the proper path heading as appropriate.
-		linePrinter.print(ff.path, line.Text)
-	}
 }
 
 // newFollowedFileForPath create a new file that will start tailing
@@ -182,6 +157,44 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	go ff.followFile()
 
 	return &ff, nil
+}
+
+// followFile follow a tailed file and call print when new lines come in. This
+// is called from newFollowedFileForPath in a goroutine.
+func (ff *followedFile) followFile() {
+	// Wait for initial output to be done in main.
+	// The tail library uses its own channel of line data to meter out lines in
+	// the range used below.
+	<-ff.ch
+
+	// Use inotify or whatever the tail package used decides.
+	for line := range ff.tail.Lines {
+		// the printer makes sure to set the proper path heading as appropriate.
+		linePrinter.print(ff.path, line.Text)
+	}
+}
+
+func colourOutput(colour int, input ...string) string {
+	str := fmt.Sprint(strings.Join(input, " "))
+	str = strings.Replace(str, "  ", " ", -1)
+
+	if !useColour {
+		return str
+	}
+
+	switch colour {
+	case brightGreen:
+		return gchalk.BrightGreen(str)
+	case brightYellow:
+		return gchalk.BrightYellow(str)
+	case brightBlue:
+		return gchalk.BrightBlue(str)
+	case brightRed:
+		return gchalk.BrightRed(str)
+	default:
+		return str
+	}
+
 }
 
 // getLines get lasn num lines in file and return them as a string slice. Return
