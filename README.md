@@ -24,6 +24,8 @@ The arguments are as follows:
    * this will fail if the `-H` option is specified
  * `-F`	follow new file lines and handle reopened or renamed files
    * this will fail if the `-H` option is specified
+ * `-P` use polling instead of OS file system events (slower but may be required
+   on Windows).
  * `-p`	print extra formatting to output if more than one file is listed
  * `-C`	no colour output
  * `-N`	show line numbers

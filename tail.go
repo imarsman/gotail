@@ -186,7 +186,7 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
-func getLines(path string, head, startAtOffset bool, total int) ([]string, int, error) {
+func getLines(path string, head, startAtOffset bool, num int) ([]string, int, error) {
 	totalLines := 0
 
 	// Declare here to ensure that defer works as it should
@@ -219,7 +219,7 @@ func getLines(path string, head, startAtOffset bool, total int) ([]string, int, 
 	// then shorten the output. Other algorithms would involve avoiding reading
 	// lines the contents in by using a buffer or counting lines or some other
 	// technique.
-	var lines = make([]string, 0, total*2)
+	var lines = make([]string, 0, num*2)
 
 	// Use reader to count lines but discard what is not needed.
 	scanner.Split(bufio.ScanLines)
@@ -230,7 +230,7 @@ func getLines(path string, head, startAtOffset bool, total int) ([]string, int, 
 		if startAtOffset {
 			totalLines = 1
 			for scanner.Scan() {
-				if totalLines >= total {
+				if totalLines >= num {
 					lines = append(lines, scanner.Text())
 				}
 				totalLines++
@@ -242,7 +242,7 @@ func getLines(path string, head, startAtOffset bool, total int) ([]string, int, 
 		}
 		totalLines = 0
 		for scanner.Scan() {
-			if totalLines < total {
+			if totalLines < num {
 				lines = append(lines, scanner.Text())
 			}
 			totalLines++
@@ -258,7 +258,7 @@ func getLines(path string, head, startAtOffset bool, total int) ([]string, int, 
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 		// If we have more than we need, remove first element
-		if totalLines >= total {
+		if totalLines >= num {
 			// Get rid of the first element to keep this a "last" slice
 			lines = lines[1:]
 		}
