@@ -112,7 +112,7 @@ func (p *printer) print(path, line string) {
 		fmt.Println(line)
 	} else {
 		p.setPath(path)
-		colourOutput(brightBlue, fmt.Sprintf("==> File %s <==\n", path))
+		fmt.Println(colourOutput(brightBlue, fmt.Sprintf("==> File %s <==", path)))
 		fmt.Println(line)
 	}
 }
