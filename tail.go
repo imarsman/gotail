@@ -59,9 +59,10 @@ func init() {
 // newPrinter get new printer instance properly instantiated
 func newPrinter() *printer {
 	p := new(printer)
-	p.currentPath = "" // initialize atomic value
-	p.setPath("")      // Fails if not initialized
-	p.mu = new(sync.Mutex)
+	// setPath needs the rw mutex
+	p.mu = new(sync.RWMutex)
+	// initialize to empty string
+	p.setPath("")
 
 	return p
 }
@@ -69,14 +70,18 @@ func newPrinter() *printer {
 // A printer is a central place for printing new lines.
 type printer struct {
 	currentPath string
-	mu          *sync.Mutex
+	mu          *sync.RWMutex
 }
 
 func (p *printer) setPath(path string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.currentPath = path
 }
 
 func (p *printer) getPath() string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.currentPath
 }
 
@@ -84,20 +89,21 @@ func (p *printer) getPath() string {
 // An atomic value would not stop situations where headers were printed in a
 // race condition even if the path was protected.
 func (p *printer) print(path, line string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	// p.mu.Lock()
+	// defer p.mu.Unlock()
 
 	// If the current followed file's path is the same as the previous one used,
 	// don't print out a header.
 	if p.getPath() == path {
 		fmt.Println(line)
-	} else {
-		// Print out a header and set new value for the path.
-		p.setPath(path)
-		fmt.Println()
-		fmt.Println(colourOutput(brightBlue, fmt.Sprintf("==> %s <==", path)))
-		fmt.Println(line)
+		return
 	}
+	// Print out a header and set new value for the path.
+	p.setPath(path)
+	fmt.Println()
+	fmt.Println(colourOutput(brightBlue, fmt.Sprintf("==> %s <==", path)))
+	fmt.Println(line)
+
 }
 
 // followedFile a file being tailed (followed)
@@ -152,8 +158,6 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	ff.ch = make(chan (int))
 
 	// Start the follow process as a go coroutine.
-	// Initially the follow waits for initial file to be finished for all files
-	// in main. Could use channels as well.
 	go ff.followFile()
 
 	return &ff, nil
@@ -179,6 +183,7 @@ func colourOutput(colour int, input ...string) string {
 		return str
 	}
 
+	// Choose colour for output or none
 	switch colour {
 	case brightGreen:
 		return gchalk.BrightGreen(str)
@@ -191,7 +196,6 @@ func colourOutput(colour int, input ...string) string {
 	default:
 		return str
 	}
-
 }
 
 // getLines get lasn num lines in file and return them as a string slice. Return
