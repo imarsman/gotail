@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -51,6 +50,7 @@ const (
 var linePrinter *printer // A struct to handle printing lines
 
 var useColour = true
+var usePolling = false
 
 func init() {
 	// // Instantiate our current file atomic value
@@ -157,10 +157,13 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	if followTrack {
 		config.ReOpen = true
 	}
-	// fsnotify might not be as robust on Windows
-	if runtime.GOOS == "windows" {
+	// For now allow a flag
+	if usePolling == true {
 		config.Poll = true
 	}
+	// fsnotify might not be as robust on Windows
+	// if runtime.GOOS == "windows" {
+	// }
 
 	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
 	if err != nil {
@@ -294,6 +297,8 @@ func main() {
 
 	// Flag for whetehr to start tail partway into a file
 	var startAtOffset bool
+
+	flag.BoolVar(&usePolling, "P", false, "use polling instead of OS file system events.")
 
 	// Flag for following tailed files
 	flag.BoolVar(&followTrack, "F", false, "follow new file lines and track file changes.")
