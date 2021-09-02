@@ -196,8 +196,9 @@ func colourOutput(colour int, input ...string) string {
 	}
 }
 
-// getLines get lasn num lines in file and return them as a string slice. Return
-// an error if for instance a filename is incorrect.
+// getLines get linesWanted lines or start gathering lines at linesWanted if
+// head is true and startAtOffset is true. Return lines as a string slice.
+// Return an error if for instance a filename is incorrect.
 func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string, int, error) {
 	totalLines := 0
 
@@ -298,6 +299,13 @@ func printHelp(out *os.File) {
 }
 
 func main() {
+	// handle a panic
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintln(os.Stderr, "Recovered in f", r)
+		}
+	}()
+
 	var helpFlag bool
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
 
@@ -492,8 +500,8 @@ func main() {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		lines, total, err := getLines("", headFlag, startAtOffset, numLines)
 		if err != nil {
-			// panic if something went wrong
-			panic(err)
+			fmt.Fprintln(os.Stderr, err.Error())
+			return
 		}
 
 		// write to stdout
@@ -517,10 +525,12 @@ func main() {
 
 	// Iterate through file path args
 	for i := 0; i < len(args); i++ {
+		// fmt.Println("file", args[i], "i", i)
 		lines, total, err := getLines(args[i], headFlag, startAtOffset, numLines)
 		if err != nil {
-			// panic if something like a bad filename is used
-			panic(err)
+			// Handled by defer
+			fmt.Fprintln(os.Stderr, err.Error())
+			continue
 		}
 		if !headFlag && followFlag {
 			ff, err := newFollowedFileForPath(args[i])
