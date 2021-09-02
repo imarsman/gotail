@@ -81,6 +81,7 @@ func (p *printer) getPath() string {
 
 func colourOutput(colour int, input ...string) string {
 	str := fmt.Sprint(strings.Join(input, " "))
+	str = strings.Replace(str, "  ", " ", -1)
 
 	if !useColour {
 		return str
@@ -267,7 +268,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 
 // printHelp print out simple help output
 func printHelp(out *os.File) {
-	fmt.Fprintln(out, colourOutput(brightGreen, os.Args[0], " - a simple tail program"))
+	fmt.Fprintln(out, colourOutput(brightGreen, os.Args[0], "- a simple tail program"))
 	fmt.Fprintln(out, "Usage")
 	fmt.Fprintln(out, "- print tail (or head) n lines of one or more files")
 	fmt.Fprintln(out, "Example: tail -n 10 file1.txt file2.txt")
