@@ -468,7 +468,7 @@ func main() {
 			panic(err)
 		}
 
-		// write will
+		// write to stdout
 		write("", head, lines, total)
 		os.Exit(0)
 	}
