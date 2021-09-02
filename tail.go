@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -155,6 +156,10 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	config := tail.Config{Follow: true, RateLimiter: lb, ReOpen: false, Poll: false, Location: &si}
 	if followTrack {
 		config.ReOpen = true
+	}
+	// fsnotify might not be as robust on Windows
+	if runtime.GOOS == "windows" {
+		config.Poll = true
 	}
 
 	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
