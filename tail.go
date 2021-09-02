@@ -181,7 +181,7 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 
 // getLines get lasn num lines in file and return them as a string slice. Return
 // an error if for instance a filename is incorrect.
-func getLines(path string, head, startAtOffset bool, num int) ([]string, int, error) {
+func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string, int, error) {
 	totalLines := 0
 
 	// Declare here to ensure that defer works as it should
@@ -214,7 +214,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 	// then shorten the output. Other algorithms would involve avoiding reading
 	// lines the contents in by using a buffer or counting lines or some other
 	// technique.
-	var lines = make([]string, 0, num*2)
+	var lines = make([]string, 0, linesWanted*2)
 
 	// Use reader to count lines but discard what is not needed.
 	scanner.Split(bufio.ScanLines)
@@ -225,7 +225,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 		if startAtOffset {
 			totalLines = 1
 			for scanner.Scan() {
-				if totalLines >= num {
+				if totalLines >= linesWanted {
 					lines = append(lines, scanner.Text())
 				}
 				totalLines++
@@ -237,7 +237,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 		}
 		totalLines = 0
 		for scanner.Scan() {
-			if totalLines < num {
+			if totalLines < linesWanted {
 				lines = append(lines, scanner.Text())
 			}
 			totalLines++
@@ -253,7 +253,7 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 		// If we have more than we need, remove first element
-		if totalLines >= num {
+		if totalLines >= linesWanted {
 			// Get rid of the first element to keep this a "last" slice
 			lines = lines[1:]
 		}
@@ -395,7 +395,7 @@ func main() {
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
 	// Added total for more informative output.
-	var write = func(path string, head bool, lines []string, total int) {
+	var write = func(path string, head bool, lines []string, linesAvailable int) {
 		builder := new(strings.Builder)
 
 		strategyStr := "tail"
@@ -413,13 +413,13 @@ func main() {
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", total), total)))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), linesAvailable)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					extent := len(lines) + numLines - 1
-					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", total), extent)))
+					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), extent)))
 				}
 			}
 		} else {
@@ -432,20 +432,20 @@ func main() {
 				// file. Do so here as well.
 				if multipleFiles {
 					if startAtOffset {
-						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, total, pluralize("line", "lines", total))))
+						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, linesAvailable, pluralize("line", "lines", linesAvailable))))
 					} else {
 						if head {
 							count := numLines
-							if numLines > total {
-								count = total
+							if numLines > linesAvailable {
+								count = linesAvailable
 							}
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, total, pluralize("line", "lines", total))))
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
 						} else {
 							count := numLines
-							if numLines > total {
-								count = total
+							if numLines > linesAvailable {
+								count = linesAvailable
 							}
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, total, pluralize("line", "lines", total))))
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
 						}
 					}
 				}
