@@ -30,6 +30,8 @@ const (
 	the number of lines requested from the tail or the head of the file's lines,
 	if available, and then prints them out to standard out.
 
+	This app can print the head lines for a file starting at an offset.
+
 	This app can also follow files as they are added to.
 
 	The native Unix implementation of tail is much smaller and uses less
@@ -161,13 +163,10 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 // is called from newFollowedFileForPath in a goroutine.
 func (ff *followedFile) followFile() {
 	// Wait for initial output to be done in main.
-	// The tail library uses its own channel of line data to meter out lines in
-	// the range used below.
 	<-ff.ch
 
-	// Use inotify or whatever the tail package used decides.
+	// Range over lines that come in, actually a channel of line structs
 	for line := range ff.tail.Lines {
-		// the printer makes sure to set the proper path heading as appropriate.
 		linePrinter.print(ff.path, line.Text)
 	}
 }
@@ -207,8 +206,6 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string,
 	var scanner *bufio.Scanner
 
 	// Use stdin if it is available. Path will be ignored.
-	// Once scanner is defined as using stdin it will run the same way as it
-	// would with a file.
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner = bufio.NewScanner(os.Stdin)
@@ -225,16 +222,15 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string,
 		scanner = bufio.NewScanner(file)
 	}
 
-	// The goal of the logic here is to allow for all lines in the input to be
-	// iterated through but to only save the ones we want. This avoids ballooning
-	// a slice to hold all of the lines in a large file then discarding almost
-	// all of them.
+	// Use a slice the capacity of the number of lines wanted. In the case of
+	// offset from head this will be less efficient as re-allocation will be done.
 	var lines = make([]string, 0, linesWanted)
 
 	// Tell scanner to scan by lines.
 	scanner.Split(bufio.ScanLines)
 
-	// Get head lines and return
+	// Get head lines and return. Easiest option as we don't need to use slice
+	// tricks to get last lines.
 	if head {
 		// Handle starting at offset, get lines, then return
 		if startAtOffset {
@@ -299,9 +295,6 @@ func printHelp(out *os.File) {
 	os.Exit(0)
 }
 
-// Option for following files that seems to be cross platform
-// https://github.com/nxadm/tail
-
 func main() {
 	var helpFlag bool
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
@@ -309,7 +302,7 @@ func main() {
 	var noColourFlag bool
 	flag.BoolVar(&noColourFlag, "C", false, "no colour output")
 
-	// Flag for whetehr to start tail partway into a file
+	// Flag for whether to start tail partway into a file
 	var startAtOffset bool
 
 	flag.BoolVar(&usePolling, "P", false, "use polling instead of OS file system events (slower).")
@@ -438,11 +431,12 @@ func main() {
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
+
+			// No lines in file
 			if len(lines) == 0 && multipleFiles {
 				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), pluralize("line", "lines", len(lines)))))
 			} else {
-				// The tail utility prints out filenames if there is more than one
-				// file. Do so here as well.
+				// With multiple files print out filename, etc. otherwise leave empty.
 				if multipleFiles {
 					if startAtOffset {
 						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, linesAvailable, pluralize("line", "lines", linesAvailable))))
@@ -469,6 +463,7 @@ func main() {
 		}
 
 		index := 0
+		// Print out all lines for file using string builder.
 		for i := 0; i < len(lines); i++ {
 			if printLinesFlag == true {
 				if startAtOffset {
