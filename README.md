@@ -19,13 +19,16 @@ The arguments are as follows:
  * `-H`	print head of file rather than tail
    * fails with `-f` option
  * `-N`	show line numbers
- * `-f`	follow new file lines (currently handles reopened or renamed files)
+ * `-f`	follow new file lines but don't recover from reopened or renamed files
+   * this will fail if the `-H` option is specified
+ * `-F`	follow new file lines and handle reopened or renamed files
    * this will fail if the `-H` option is specified
  * `-h`	print usage
  * `-n` string
    * number of lines - prefix `+` for head to start at line `-n` (default "10")
    * when `-H` is used can prefix with `+` (e.g. `-n +10`) to start at `-n` lines into file
  * `-p`	print extra formatting to output if more than one file is listed
+ * `-C`	no colour output
 
 
 # Building and Running
