@@ -33,17 +33,15 @@ const (
 	This app can also follow files as they are added to.
 
 	The native Unix implementation of tail is much smaller and uses less
-	resources. This is mostly a test.
-
-	One thing that could be added is to take in data from stdin.
+	resources. This is mostly a test but it seems to work well so far.
 
 	// Regular tail
 	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | tail -n +100 >/dev/null
-	real    0m0.308s
+	real	0m0.011s
 
 	// This tail
-	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | ./tail -H -n +100 >/dev/null
-	real    0m0.048
+	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | gotail -H -n +100 >/dev/null
+	real	0m0.006s
 */
 
 var linePrinter *printer // A struct to handle printing lines
@@ -306,7 +304,6 @@ func printHelp(out *os.File) {
 
 func main() {
 	var helpFlag bool
-	// Help flag
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
 
 	var noColourFlag bool
@@ -317,30 +314,22 @@ func main() {
 
 	flag.BoolVar(&usePolling, "P", false, "use polling instead of OS file system events (slower).")
 
-	// Flag for following tailed files
 	flag.BoolVar(&followTrack, "F", false, "follow new file lines and track file changes.")
 
-	// Flag for following tailed files
 	var followFlag bool
 	flag.BoolVar(&followFlag, "f", false, "follow new file lines. No change tracking.")
 
-	// For later - number to use for head or tail or start at
 	var numLines int
-	// String for number to use for head or tail or to with offset
 	var numLinesStr string
-	// Number of lines to print argument
 	flag.StringVar(&numLinesStr, "n", "10", "number of lines - prefix '+' for head to start at line n")
 
 	var prettyFlag bool
-	// Pretty printing flag
 	flag.BoolVar(&prettyFlag, "p", false, "print extra formatting to output if more than one file is listed")
 
 	var printLinesFlag bool
-	// Pring line numbers flag
 	flag.BoolVar(&printLinesFlag, "N", false, "show line numbers")
 
 	var headFlag bool
-	// Print head lines flag
 	flag.BoolVar(&headFlag, "H", false, "print head of file rather than tail")
 
 	flag.Parse()
@@ -417,9 +406,8 @@ func main() {
 		return plural
 	}
 
-	// If a large amount of processing is required handling output for a file at
-	// a time shoud help the garbage collector and memory usage.
-	// Added total for more informative output.
+	// Write lines for a single file to avoid growing large output then dumping
+	// all at once.
 	var write = func(path string, head bool, lines []string, linesAvailable int) {
 		builder := new(strings.Builder)
 
@@ -516,8 +504,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Get args not tied to defined parameters. They will be interpreted as file
-	// paths.
+	// args are interpreted as paths
 	args := flag.Args()
 
 	// For printing out file information when > 1 file being processed
@@ -553,8 +540,7 @@ func main() {
 		write(args[i], headFlag, lines, total)
 	}
 
-	// Write to the channel for each followed file. The print function for
-	// followed files waits for a write to channel before it starts.
+	// Write to channel for each followed file to release them to follow.
 	for _, ff := range followedFiles {
 		ff.ch <- 1
 	}
