@@ -49,25 +49,19 @@ const (
 
 var linePrinter *printer // A struct to handle printing lines
 
-var useColour = true
-var usePolling = false
+var useColour = true   // use colour - defaults to true
+var usePolling = false // use polling - defaults to inotify
+var followTrack bool   // follow renamed or replaced files
 
 func init() {
-	// // Instantiate our current file atomic value
-	// currentPath = new(atomic.Value)
-	// // We're storing a string so start that off
-	// currentPath.Store("")
-
 	linePrinter = newPrinter()
-	// Initialize our line printer
-	// linePrinter = new(printer)
-	// linePrinter.currentPath = new(atomic.Value)
 }
 
+// newPrinter get new printer instance properly instantiated
 func newPrinter() *printer {
 	p := new(printer)
-	p.currentPath = new(atomic.Value)
-	p.setPath("")
+	p.currentPath = new(atomic.Value) // initialize atomic value
+	p.setPath("")                     // Fails if not initialized
 
 	return p
 }
@@ -273,7 +267,6 @@ func getLines(path string, head, startAtOffset bool, num int) ([]string, int, er
 
 // printHelp print out simple help output
 func printHelp(out *os.File) {
-
 	fmt.Fprintln(out, colourOutput(brightGreen, os.Args[0], " - a simple tail program"))
 	fmt.Fprintln(out, "Usage")
 	fmt.Fprintln(out, "- print tail (or head) n lines of one or more files")
@@ -281,8 +274,6 @@ func printHelp(out *os.File) {
 	flag.PrintDefaults()
 	os.Exit(0)
 }
-
-var followTrack bool
 
 // Option for following files that seems to be cross platform
 // https://github.com/nxadm/tail
@@ -393,6 +384,13 @@ func main() {
 
 	var multipleFiles bool
 
+	var plural = func(singular, plural string, number int) string {
+		if number == 1 {
+			return singular
+		}
+		return plural
+	}
+
 	// If a large amount of processing is required handling output for a file at
 	// a time shoud help the garbage collector and memory usage.
 	// Added total for more informative output.
@@ -414,35 +412,41 @@ func main() {
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, numLines, total)))
+				var plural = plural("line", "lines", total)
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, plural, total)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
+					var plural = plural("line", "lines", total)
 					extent := len(lines) + numLines - 1
-					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, numLines, extent)))
+					builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, plural, extent)))
 				}
 			}
 		} else {
 			// The tail utility prints out filenames if there is more than one
 			// file. Do so here as well.
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - %s of %d lines <==\n", path, strategyStr, len(lines))))
+				var plural = plural("line", "lines", len(lines))
+				builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), plural)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					if startAtOffset {
-						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d lines <==\n", path, numLines, total)))
+						var plural = plural("line", "lines", total)
+						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, total, plural)))
 					} else {
 						if head {
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d lines <==\n", path, numLines, total)))
+							var plural = plural("line", "lines", total)
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, numLines, total, plural)))
 						} else {
 							count := numLines
 							if numLines > total {
 								count = total
 							}
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - tail %d of %d lines <==\n", path, count, total)))
+							var plural = plural("line", "lines", total)
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, total, plural)))
 						}
 					}
 				}
