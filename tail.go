@@ -80,7 +80,7 @@ func (p *printer) getPath() string {
 }
 
 func colourOutput(colour int, input ...string) string {
-	str := fmt.Sprint(strings.Join(input, ""))
+	str := fmt.Sprint(strings.Join(input, " "))
 
 	if !useColour {
 		return str
