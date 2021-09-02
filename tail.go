@@ -438,8 +438,12 @@ func main() {
 						builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, total, plural)))
 					} else {
 						if head {
+							count := numLines
+							if numLines > total {
+								count = total
+							}
 							var plural = plural("line", "lines", total)
-							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, numLines, total, plural)))
+							builder.WriteString(colourOutput(brightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, total, plural)))
 						} else {
 							count := numLines
 							if numLines > total {
