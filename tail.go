@@ -422,9 +422,7 @@ func main() {
 
 		strategyStr := "tail"
 		if head {
-			if !startAtOffset {
-				strategyStr = "head"
-			}
+			strategyStr = "head"
 		}
 
 		// Skips for single file and stdin

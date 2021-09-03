@@ -29,7 +29,7 @@ The arguments are as follows:
  * `-p`	print extra formatting to output if more than one file is listed
  * `-C`	no colour output
  * `-N`	show line numbers
- * `-H`	print head of file rather than tail
+ * `-H`	print head of file rather than tail - assumed with + in -n value
    * fails with `-f` option
 
 
