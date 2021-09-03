@@ -116,6 +116,8 @@ func newPrinter() *printer {
 	p.messages = make(chan (msg))
 
 	// Print messages in goroutine to avoid exposing
+	// messages channel is an ordered queue and as such has its own locking
+	// behaviour. Previously tried mutex.
 	go func() {
 		for m := range p.messages {
 			if p.getPath() == m.path {
