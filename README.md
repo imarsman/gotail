@@ -32,6 +32,8 @@ The arguments are as follows:
  * `-H`	print head of file rather than tail - assumed with + in -n value
    * fails with `-f` option
 
+One possible extension would be to periodically look for new files and add them
+to a followed list.
 
 # Building and Running
 
