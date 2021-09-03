@@ -203,6 +203,12 @@ func colour(colour int, input ...string) string {
 // head is true and startAtOffset is true. Return lines as a string slice.
 // Return an error if for instance a filename is incorrect.
 func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string, int, error) {
+	// handle a panic
+	// defer func() {
+	// 	if err := recover(); err != nil {
+	// 	}
+	// }()
+
 	totalLines := 0
 
 	// Declare here to ensure that defer works as it should
@@ -220,6 +226,8 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string,
 
 		file, err = os.Open(path)
 		if err != nil {
+			// Something wrong like bad file path
+			fmt.Fprintln(os.Stderr, err.Error())
 			return nil, totalLines, err
 		}
 
@@ -303,12 +311,6 @@ func printHelp(out *os.File) {
 }
 
 func main() {
-	// handle a panic
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println(err)
-		}
-	}()
 
 	var helpFlag bool
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
@@ -532,8 +534,7 @@ func main() {
 		// fmt.Println("file", args[i], "i", i)
 		lines, total, err := getLines(args[i], headFlag, startAtOffset, numLines)
 		if err != nil {
-			// Handled by defer
-			fmt.Fprintln(os.Stderr, err.Error())
+			// there was a problem such as a ban file path
 			continue
 		}
 		if !headFlag && followFlag {
