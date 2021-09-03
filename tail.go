@@ -164,7 +164,7 @@ func (p *printer) print(path, line string) {
 type followedFile struct {
 	path string
 	tail *tail.Tail
-	ch   chan (int)
+	ch   chan struct{}
 }
 
 // newFollowedFileForPath create a new file that will start tailing
@@ -207,7 +207,7 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	ff.path = path
 
 	// make channel to use to wait for initial lines to be tailed
-	ff.ch = make(chan (int))
+	ff.ch = make(chan struct{})
 
 	// Start the follow process as a go coroutine.
 	go ff.followFile()
@@ -609,7 +609,7 @@ func main() {
 
 	// Write to channel for each followed file to release them to follow.
 	for _, ff := range followedFiles {
-		ff.ch <- 1
+		ff.ch <- *new(struct{})
 	}
 
 	// Wait to exit if files being followed
