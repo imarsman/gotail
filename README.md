@@ -30,7 +30,7 @@ The arguments are as follows:
 One possible extension would be to periodically look for new files and add them
 to a followed list.
 
-# Building and Running
+## Building and Running
 
 The app can be built by typing the command below (with a Go 1.16 compiler). If
 you have an older version of Go installed you can change the version number in
