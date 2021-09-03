@@ -305,8 +305,8 @@ func printHelp(out *os.File) {
 func main() {
 	// handle a panic
 	defer func() {
-		if r := recover(); r != nil {
-			fmt.Fprintln(os.Stderr, "Recovered in f", r)
+		if err := recover(); err != nil {
+			fmt.Println(err)
 		}
 	}()
 
