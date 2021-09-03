@@ -115,7 +115,20 @@ func newPrinter() *printer {
 	p.setPath("")
 	p.messages = make(chan (msg))
 
-	go p.printMessages()
+	// Print messages in goroutine to avoid exposing
+	go func() {
+		for m := range p.messages {
+			if p.getPath() == m.path {
+				fmt.Println(m.line)
+				continue
+			}
+			// Print out a header and set new value for the path.
+			p.setPath(m.path)
+			fmt.Println()
+			fmt.Println(colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
+			fmt.Println(m.line)
+		}
+	}()
 
 	return p
 }
@@ -133,20 +146,6 @@ func (p *printer) setPath(path string) {
 
 func (p *printer) getPath() string {
 	return p.currentPath
-}
-
-func (p *printer) printMessages() {
-	for m := range p.messages {
-		if p.getPath() == m.path {
-			fmt.Println(m.line)
-			continue
-		}
-		// Print out a header and set new value for the path.
-		p.setPath(m.path)
-		fmt.Println()
-		fmt.Println(colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
-		fmt.Println(m.line)
-	}
 }
 
 // print print lines from a followed file
