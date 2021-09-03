@@ -13,7 +13,7 @@ The arguments are as follows:
 
  * `-h` print usage
  * `-n` string
-   * number of lines - prefix `+` for head to start at line `-n` (default "10")
+   * number of lines to print from tail or head of file
    * when the `+` prefix is used `-H` is assumed (e.g. `-n +10`) and causes
      printout to start at `-n` lines into file
  * `-f`	follow new file lines but don't recover from reopened or renamed files
