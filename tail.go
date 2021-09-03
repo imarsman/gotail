@@ -22,6 +22,7 @@ const (
 	brightYellow
 	brightBlue
 	brightRed
+	noColour // Can use to default to no colour output
 )
 
 /*
