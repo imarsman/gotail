@@ -55,38 +55,6 @@ const (
 func init() {
 }
 
-/*
-	The soft limit is the value that the kernel enforces for the corresponding
-	resource. The hard limit acts as a ceiling for the soft limit: an unprivileged
-	process may only set its soft limit to a value in the range from 0 up to the
-	hard limit, and (irreversibly) lower its hard limit. A privileged process (under
-	Linux: one with the CAP_SYS_RESOURCE capability) may make arbitrary changes to
-	either limit value.
-
-	Note:
-	When testing the hard limit on MacOS was 9223372036854775807
-*/
-// func setrlimit() syscall.Rlimit {
-// 	var rLimit syscall.Rlimit
-// 	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-// 	if err != nil {
-// 		fmt.Println("Error Getting Rlimit ", err)
-// 	}
-// 	fmt.Printf("Rlimit %+v", rLimit)
-// 	rLimit.Max = 999999
-// 	rLimit.Cur = 999999
-// 	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-// 	if err != nil {
-// 		fmt.Println("Error Setting Rlimit ", err)
-// 	}
-// 	err = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-// 	if err != nil {
-// 		fmt.Println("Error Getting Rlimit ", err)
-// 	}
-
-// 	return rLimit
-// }
-
 func TestRLimit(t *testing.T) {
 	t.Logf("Limit %+v", setrlimit(999999))
 }
