@@ -56,7 +56,12 @@ var useColour = true   // use colour - defaults to true
 var usePolling = false // use polling - defaults to inotify
 var followTrack bool   // follow renamed or replaced files
 
+// This could be used to use the base directory to look for new files
+// periodically and add them to a followed tail list.
+var activeFiles map[string]bool
+
 func init() {
+	activeFiles = make(map[string]bool)
 	linePrinter = newPrinter()
 }
 
@@ -312,7 +317,6 @@ func printHelp(out *os.File) {
 }
 
 func main() {
-
 	var helpFlag bool
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
 
@@ -536,6 +540,9 @@ func main() {
 			// there was a problem such as a ban file path
 			continue
 		}
+
+		activeFiles[args[i]] = true
+
 		if !headFlag && followFlag {
 			ff, err := newFollowedFileForPath(args[i])
 			followedFiles = append(followedFiles, ff)
@@ -558,6 +565,7 @@ func main() {
 
 	// Wait to exit if files being followed
 	if followFlag && !headFlag {
+		// fmt.Printf("active files %+v", activeFiles)
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt)
 
