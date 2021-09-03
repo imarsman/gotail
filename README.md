@@ -75,27 +75,12 @@ to intepret globbing patterns as paths must be in there. Thus this works:
 
 `./tail -N -n 15 sample/*.txt`
 
-An efficiency option for very large files would use a buffer to hold lines and
-do something like iterate in reverse through the contents of a file, printing
-out line by line until the target number had been reached or there were no more
-lines. This would bring in the complexity of dealing with different line ending
-standards in Unix and Windows. As it stands, the string reading core package
-used, bufio, deals with reading in lines very well. I would be able to write
-such an application, but I would need to have a good reason to spend the extra
-effort. One great reason would be the ability to handl extremely large files
-with a limited increase in memory expended. Such an implementation would read a
-portion of the file into memory, such as 1024 bytes or a span or runes, which
-would avoid damaging multi-byte characters, and read this buffer into a scanner.
-This is something I have not done yet but that is the general plan. Extra issues
-would have to be dealt with such as having lines break over buffer reads,
-avoiding having an error on hitting the end of a file, etc.
-
-I did modify the code to print out a file at a time rather than building a
-buffer of all of the lines for all of the files then printing. I also used an
-in-place method to reverse the ordering of a string slice to avoid allocation.
-A strings.Builder is used when writing out file data. It has been available
-since Go 1.10 and is non-allocating. It also deals with bytes, runes, and
-strings.
+The code is stuctured to limit memory usage. The buffer used to read in lines
+only allocates to the lines slice when it is within range (for tail or head) and
+otherwise uses the line fetching only to count lines. The largest memory usage
+is likely to be caused by a head request starting at an offset. Each file is
+written after its lines are fetched, so hopefully this will help avoid building
+of memory use.
 
 ## Running Tests and Benchmarks
 
