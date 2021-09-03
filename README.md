@@ -25,7 +25,7 @@ The arguments are as follows:
  * `-p`	print extra formatting to output if more than one file is listed
  * `-C`	no colour output
  * `-N`	show line numbers
- * `-H`	print head of file rather than tail - assumed with + in -n value
+ * `-H`	print head of file rather than tail - assumed with `+` in `-n` value
    * fails with `-f` option
 
 One possible extension would be to periodically look for new files and add them
