@@ -75,7 +75,8 @@ func BenchmarkGetLines(b *testing.B) {
 
 	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
-	b.SetParallelism(30)
+	// Set too high this can cause "too many open files" on MacOS
+	b.SetParallelism(2)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			lines, total, err = getLines("sample/1.txt", false, false, 10)
