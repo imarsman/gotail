@@ -4,14 +4,14 @@ This is an implementation of part of the tail command, which apparently first
 appeared in PWB UNIX, out of Bell Labs, in 1977. The tail command does lots of
 things, most prominently showing the last lines of a file. The tail command also
 allows you to print lines of a file stating at an offset and to show new lines
-in a file as they are written to the file. This app implements a subset of the
-official tail command's options. It prints out a default of the last 10 lines of
-a file or a number that can be specified with then -n flag. This implementation
-also has flags to allow adding formatting to output, printing out the line
-number for each line, and the option of showing the head (first) lines instead
-of the tail (last) lines of a file (what the `head` command does). Support also
-exists for following files and printing out new lines as they are written, for
-example, with log files.
+in a file as they are written to the file. This app implements quite a few of
+the official tail command's options. It prints out a default of the last 10
+lines of a file or a number that can be specified with then -n flag. This
+implementation also has flags to allow adding formatting to output, printing out
+the line number for each line, and the option of showing the head (first) lines
+instead of the tail (last) lines of a file (what the `head` command does). As
+with the original tail, support also exists for following files and printing out
+new lines as they are written, for example, with log files.
 
 ## Arguments
 
