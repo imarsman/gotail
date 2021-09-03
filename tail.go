@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/jwalton/gchalk"
@@ -24,6 +25,36 @@ const (
 	brightRed
 	noColour // Can use to default to no colour output
 )
+
+/*
+	The soft limit is the value that the kernel enforces for the corresponding
+	resource. The hard limit acts as a ceiling for the soft limit: an unprivileged
+	process may only set its soft limit to a value in the range from 0 up to the
+	hard limit, and (irreversibly) lower its hard limit. A privileged process (under
+	Linux: one with the CAP_SYS_RESOURCE capability) may make arbitrary changes to
+	either limit value.
+
+	Note:
+	When testing the hard limit on MacOS was 9223372036854775807
+*/
+func setrlimit(limit uint64) syscall.Rlimit {
+	var rLimit syscall.Rlimit
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		fmt.Println("Error Getting Rlimit ", err)
+	}
+	rLimit.Cur = limit
+	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		fmt.Println("Error Setting Rlimit ", err)
+	}
+	err = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		fmt.Println("Error Getting Rlimit ", err)
+	}
+
+	return rLimit
+}
 
 /*
 	This app takes a number of lines argument, a "pretty" argument for more
@@ -56,13 +87,18 @@ var useColour = true   // use colour - defaults to true
 var usePolling = false // use polling - defaults to inotify
 var followTrack bool   // follow renamed or replaced files
 
-// This could be used to use the base directory to look for new files
-// periodically and add them to a followed tail list.
-var activeFiles map[string]bool
+var followedFiles []*followedFile
+
+var rlimit uint64
 
 func init() {
-	activeFiles = make(map[string]bool)
+	followedFiles = make([]*followedFile, 0, 100)
+
 	linePrinter = newPrinter()
+	rlimit = 1000
+
+	// Set files limit
+	setrlimit(rlimit)
 }
 
 // newPrinter get new printer instance properly instantiated
@@ -530,7 +566,13 @@ func main() {
 		printHelp(out)
 	}
 
-	var followedFiles = make([]*followedFile, 0, len(args))
+	// var followedFiles = make([]*followedFile, 0, len(args))
+
+	// Guard against handling too many files
+	if len(args) > int(rlimit) {
+		fmt.Fprintf(os.Stderr, "Too many files specified. Max is %d\n", rlimit)
+		os.Exit(1)
+	}
 
 	// Iterate through file path args
 	for i := 0; i < len(args); i++ {
@@ -540,8 +582,6 @@ func main() {
 			// there was a problem such as a ban file path
 			continue
 		}
-
-		activeFiles[args[i]] = true
 
 		if !headFlag && followFlag {
 			ff, err := newFollowedFileForPath(args[i])
