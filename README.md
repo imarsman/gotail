@@ -11,10 +11,11 @@ but does not currently add new files that appear in a directory.
 
 The arguments are as follows:
 
- * `-h`	print usage
+ * `-h` print usage
  * `-n` string
    * number of lines - prefix `+` for head to start at line `-n` (default "10")
-   * when `-H` is used can prefix with `+` (e.g. `-n +10`) to start at `-n` lines into file
+   * when the `+` prefix is used `-H` is assumed (e.g. `-n +10`) and causes
+     printout to start at `-n` lines into file
  * `-f`	follow new file lines but don't recover from reopened or renamed files
    * this will fail if the `-H` option is specified
  * `-F`	follow new file lines and handle reopened or renamed files
