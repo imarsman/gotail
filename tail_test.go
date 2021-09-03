@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"syscall"
 	"testing"
 )
 
@@ -55,9 +56,44 @@ const (
 func init() {
 }
 
+/*
+	The soft limit is the value that the kernel enforces for the corresponding
+	resource. The hard limit acts as a ceiling for the soft limit: an unprivileged
+	process may only set its soft limit to a value in the range from 0 up to the
+	hard limit, and (irreversibly) lower its hard limit. A privileged process (under
+	Linux: one with the CAP_SYS_RESOURCE capability) may make arbitrary changes to
+	either limit value.
+
+	Note:
+	When testing the hard limit on MacOS was 9223372036854775807
+*/
+func setrlimit() syscall.Rlimit {
+	var rLimit syscall.Rlimit
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		fmt.Println("Error Getting Rlimit ", err)
+	}
+	fmt.Printf("Rlimit %+v", rLimit)
+	rLimit.Max = 999999
+	rLimit.Cur = 999999
+	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		fmt.Println("Error Setting Rlimit ", err)
+	}
+	err = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		fmt.Println("Error Getting Rlimit ", err)
+	}
+
+	return rLimit
+}
+
+func TestRLimit(t *testing.T) {
+	t.Logf("Limit %+v", setrlimit())
+}
+
 // Get some lines
 func TestGetLines(t *testing.T) {
-
 	lines, total, err := getLines("sample/1.txt", false, false, 10)
 	if err != nil {
 		t.Fail()
@@ -68,6 +104,7 @@ func TestGetLines(t *testing.T) {
 // go test -run=XXX -bench=. -benchmem
 // BenchmarkGetLines-12    659.9 ns/op    15.15 MB/s    363 B/op    3 allocs/op
 func BenchmarkGetLines(b *testing.B) {
+	setrlimit()
 
 	var lines []string
 	var total int
@@ -75,8 +112,8 @@ func BenchmarkGetLines(b *testing.B) {
 
 	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
-	// Set too high this can cause "too many open files" on MacOS
-	b.SetParallelism(2)
+	// Change rlimit prior to trying to run with this level of parallelism
+	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			lines, total, err = getLines("sample/1.txt", false, false, 10)
