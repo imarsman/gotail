@@ -7,6 +7,10 @@ allows you to print lines of a file stating at an offset and to show new lines
 in a file as they are written to the file. This implementation does all of this
 but does not currently add new files that appear in a directory.
 
+The specification for the tail command can be found
+[here](https://pubs.opengroup.org/onlinepubs/007904875/utilities/tail.html). No
+claim is made that this app is compliant with that standard.
+
 ## Arguments
 
 The arguments are as follows:
