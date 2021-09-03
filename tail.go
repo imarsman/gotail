@@ -101,6 +101,11 @@ func init() {
 	setrlimit(rlimit)
 }
 
+type msg struct {
+	path string
+	line string
+}
+
 // newPrinter get new printer instance properly instantiated
 func newPrinter() *printer {
 	p := new(printer)
@@ -108,6 +113,9 @@ func newPrinter() *printer {
 	p.mu = new(sync.Mutex)
 	// initialize to empty string
 	p.setPath("")
+	p.messages = make(chan (msg))
+
+	go p.printMessages()
 
 	return p
 }
@@ -115,6 +123,7 @@ func newPrinter() *printer {
 // A printer is a central place for printing new lines.
 type printer struct {
 	currentPath string
+	messages    chan (msg)
 	mu          *sync.Mutex
 }
 
@@ -126,27 +135,26 @@ func (p *printer) getPath() string {
 	return p.currentPath
 }
 
+func (p *printer) printMessages() {
+	for m := range p.messages {
+		if p.getPath() == m.path {
+			fmt.Println(m.line)
+			continue
+		}
+		// Print out a header and set new value for the path.
+		p.setPath(m.path)
+		fmt.Println()
+		fmt.Println(colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
+		fmt.Println(m.line)
+	}
+}
+
 // print print lines from a followed file
 // An atomic value would not stop situations where headers were printed in a
 // race condition even if the path was protected.
 func (p *printer) print(path, line string) {
-	// NOTE: Using a RWMutex will result in having path headers disconnected
-	// from the lines they belong to. Need to lock more strictly here.
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	// If the current followed file's path is the same as the previous one used,
-	// don't print out a header.
-	if p.getPath() == path {
-		fmt.Println(line)
-		return
-	}
-
-	// Print out a header and set new value for the path.
-	p.setPath(path)
-	fmt.Println()
-	fmt.Println(colour(brightBlue, fmt.Sprintf("==> %s <==", path)))
-	fmt.Println(line)
+	m := msg{path: path, line: line}
+	p.messages <- m
 }
 
 // followedFile a file being tailed (followed)
