@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -36,6 +35,22 @@ const (
 
 	Note:
 	When testing the hard limit on MacOS was 9223372036854775807
+
+	Output:
+	There are two modes of output in this app. The first mode is a file-by file
+	output of lines to standard output. In this condition, each file to have
+	lines printed is processed and its output is printed to stdout iteratively.
+	In the second condition with the follow option selected, new lines for each
+	file are received by the tail package (nxadm/tail) and sent to a common
+	printer struct instance (common to the package) with the file path and the
+	line as arguments. If the file path is the same as the last one used no file
+	path header is added. Otherwise the path of the file is sent to stdout and
+	then the new line. Queuing for this is handled by a channel in the printer
+	struct.
+
+	Before the use of a channel for the printer a mutex was used. The channel
+	does what a mutex would do and has the benefit of allowing a simple message
+	with path and line to be sent in the channel.
 */
 func setrlimit(limit uint64) syscall.Rlimit {
 	var rLimit syscall.Rlimit
@@ -94,52 +109,59 @@ var rlimit uint64
 func init() {
 	followedFiles = make([]*followedFile, 0, 100)
 
+	// We'll always get the same instance from newPrinter.
 	linePrinter = newPrinter()
+
 	rlimit = 1000
 
 	// Set files limit
 	setrlimit(rlimit)
 }
 
+// a message to be sent when following a file
 type msg struct {
 	path string
 	line string
-}
-
-// newPrinter get new printer instance properly instantiated
-func newPrinter() *printer {
-	p := new(printer)
-	// setPath needs the rw mutex
-	p.mu = new(sync.Mutex)
-	// initialize to empty string
-	p.setPath("")
-	p.messages = make(chan (msg))
-
-	// Print messages in goroutine to avoid exposing
-	// messages channel is an ordered queue and as such has its own locking
-	// behaviour. Previously tried mutex.
-	go func() {
-		for m := range p.messages {
-			if p.getPath() == m.path {
-				fmt.Println(m.line)
-				continue
-			}
-			// Print out a header and set new value for the path.
-			p.setPath(m.path)
-			fmt.Println()
-			fmt.Println(colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
-			fmt.Println(m.line)
-		}
-	}()
-
-	return p
 }
 
 // A printer is a central place for printing new lines.
 type printer struct {
 	currentPath string
 	messages    chan (msg)
-	mu          *sync.Mutex
+}
+
+// newPrinter get new printer instance properly instantiated
+// Use package level linePrinter to enforce singleton pattern, as that is the
+// needed pattern at this point.
+func newPrinter() *printer {
+	if linePrinter == nil {
+		linePrinter = new(printer)
+	} else {
+		return linePrinter
+	}
+	// initialize to empty string
+	linePrinter.setPath("")
+	linePrinter.messages = make(chan (msg))
+
+	// Print messages in goroutine to avoid exposing messages channel which has
+	// its own locking behaviour. Use of a channel avoids worries about race
+	// condition with incoming path compared to printer path. Previous code
+	// tried atomic values for path and a mutex instead of a channel.
+	go func() {
+		for m := range linePrinter.messages {
+			if linePrinter.getPath() == m.path {
+				fmt.Println(m.line)
+				continue
+			}
+			// Print out a header and set new value for the path.
+			linePrinter.setPath(m.path)
+			fmt.Println()
+			fmt.Println(colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
+			fmt.Println(m.line)
+		}
+	}()
+
+	return linePrinter
 }
 
 func (p *printer) setPath(path string) {
@@ -151,8 +173,7 @@ func (p *printer) getPath() string {
 }
 
 // print print lines from a followed file
-// An atomic value would not stop situations where headers were printed in a
-// race condition even if the path was protected.
+// Use channel.
 func (p *printer) print(path, line string) {
 	m := msg{path: path, line: line}
 	p.messages <- m
