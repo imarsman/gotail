@@ -1,4 +1,4 @@
-module github.com/imarsman/tail
+module github.com/imarsman/gotail
 
 go 1.16
 
