@@ -1,15 +1,20 @@
 # tail
 
-This is an implementation of part of the tail command, which apparently first
-appeared in PWB UNIX, out of Bell Labs, in 1977. The tail command does lots of
-things, most prominently showing the last lines of a file. The tail command also
-allows you to print lines of a file stating at an offset and to show new lines
-in a file as they are written to the file. This implementation does all of this
-but does not currently add new files that appear in a directory.
+This is an implementation of part of the tail command, which was used in PWB
+UNIX, out of Bell Labs, in 1977. The tail command does lots of things, most
+prominently showing the last lines of a file. The tail command also allows you
+to print lines of a file stating at an offset and to show new lines in a file as
+they are written to the file. This implementation does all of this but does not
+currently add new files that appear in a directory.
 
 The specification for the tail command can be found
 [here](https://pubs.opengroup.org/onlinepubs/007904875/utilities/tail.html). No
-claim is made that this app is compliant with that standard.
+claim is made that this app is compliant with that standard. This implementation
+does not have the ability to use bytes as the offset, it only uses lines (`-n`).
+Unlike the standard `tail`, this implementation has a `-H` (head) flag and
+produces coloured output for file paths. Colour output can be turned off using
+the `-C` flag. This implementation also allows for a small amount of extra
+formatting to be added using the `-p` (pretty) flag.
 
 ## Arguments
 
