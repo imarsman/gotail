@@ -204,7 +204,10 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	si := tail.SeekInfo{Offset: size, Whence: 0}
 
 	// Use leaky bucket algorithm to rate limit output.
-	// The setting used has not been tested.
+	// The size is the bucket capacity before rate limiting begins. After that,
+	// the leak interval kicks in. If the size is too small a spurt of new lines
+	// will cause the tail package to cease tailing for a period of time.
+	// Initially the size was set to 10 and that was insufficient.
 	lb := ratelimiter.NewLeakyBucket(1000, 1*time.Millisecond)
 
 	config := tail.Config{Follow: true, RateLimiter: lb, ReOpen: false, Poll: false, Location: &si}
