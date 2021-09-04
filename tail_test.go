@@ -56,7 +56,7 @@ func init() {
 }
 
 func TestRLimit(t *testing.T) {
-	t.Logf("Limit %+v", setrlimit(999999))
+	t.Logf("Limit %+v", setrlimit(1000))
 }
 
 // Get some lines
@@ -71,7 +71,7 @@ func TestGetLines(t *testing.T) {
 // go test -run=XXX -bench=. -benchmem
 // BenchmarkGetLines-12    659.9 ns/op    15.15 MB/s    363 B/op    3 allocs/op
 func BenchmarkGetLines(b *testing.B) {
-	setrlimit(999999)
+	setrlimit(1000)
 
 	var lines []string
 	var total int

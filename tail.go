@@ -27,6 +27,41 @@ const (
 )
 
 /*
+	This app takes a number of lines argument, a "pretty" argument for more
+	illustrative output, and a list of paths to files, and for each file gathers
+	the number of lines requested from the tail or the head of the file's lines,
+	if available, and then prints them out to standard out.
+
+	This app can print the head lines for a file starting at an offset.
+
+	This app can also follow files as they are added to.
+
+	The native Unix implementation of tail is much smaller and uses less
+	resources. This is mostly a test but it seems to work well so far.
+
+	// Regular tail
+	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | tail -n +100 >/dev/null
+	real	0m0.011s
+
+	// This tail
+	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | gotail -H -n +100 >/dev/null
+	real	0m0.006s
+
+	There is likely more to do in terms of directing output properly to stdout
+	or stderr.
+*/
+
+var printerOnce sync.Once                         // used to ensure printer instantiated only once
+var linePrinter *printer                          // A struct to handle printing lines
+var followedFiles = make([]*followedFile, 0, 100) // initialize followed files here
+
+var useColour = true         // use colour - defaults to true
+var usePolling = false       // use polling - defaults to inotify
+var followTrack bool = false // follow renamed or replaced files
+
+var rlimit uint64
+
+/*
 	The soft limit is the value that the kernel enforces for the corresponding
 	resource. The hard limit acts as a ceiling for the soft limit: an unprivileged
 	process may only set its soft limit to a value in the range from 0 up to the
@@ -72,45 +107,7 @@ func setrlimit(limit uint64) syscall.Rlimit {
 	return rLimit
 }
 
-/*
-	This app takes a number of lines argument, a "pretty" argument for more
-	illustrative output, and a list of paths to files, and for each file gathers
-	the number of lines requested from the tail or the head of the file's lines,
-	if available, and then prints them out to standard out.
-
-	This app can print the head lines for a file starting at an offset.
-
-	This app can also follow files as they are added to.
-
-	The native Unix implementation of tail is much smaller and uses less
-	resources. This is mostly a test but it seems to work well so far.
-
-	// Regular tail
-	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | tail -n +100 >/dev/null
-	real	0m0.011s
-
-	// This tail
-	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | gotail -H -n +100 >/dev/null
-	real	0m0.006s
-
-	There is likely more to do in terms of directing output properly to stdout
-	or stderr.
-*/
-
-var printerOnce sync.Once // used to ensure printer instantiated only once
-var linePrinter *printer  // A struct to handle printing lines
-
-var useColour = true   // use colour - defaults to true
-var usePolling = false // use polling - defaults to inotify
-var followTrack bool   // follow renamed or replaced files
-
-var followedFiles []*followedFile
-
-var rlimit uint64
-
 func init() {
-	followedFiles = make([]*followedFile, 0, 100)
-
 	// We'll always get the same instance from newPrinter.
 	linePrinter = newPrinter()
 
@@ -177,14 +174,15 @@ func (p *printer) getPath() string {
 	return p.currentPath
 }
 
-// print print lines from a followed file
-// Use channel.
+// print print lines from a followed file.
+// An anonymous function is started in newPrinter to handle additions to the
+// message channel.
 func (p *printer) print(path, line string) {
 	m := msg{path: path, line: line}
 	p.messages <- m
 }
 
-// followedFile a file being tailed (followed)
+// followedFile a file being tailed (followed).
 // Uses the tail library which has undoubtedly taken many hours to get working
 // well.
 type followedFile struct {
@@ -235,22 +233,18 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	// make channel to use to wait for initial lines to be tailed
 	ff.ch = make(chan struct{})
 
-	// Start the follow process as a go coroutine.
-	go ff.followFile()
+	// Using anonymous function to avoid having this called separately
+	go func() {
+		// Wait for initial output to be done in main.
+		<-ff.ch
+
+		// Range over lines that come in, actually a channel of line structs
+		for line := range ff.tail.Lines {
+			linePrinter.print(ff.path, line.Text)
+		}
+	}()
 
 	return &ff, nil
-}
-
-// followFile follow a tailed file and call print when new lines come in. This
-// is called from newFollowedFileForPath in a goroutine.
-func (ff *followedFile) followFile() {
-	// Wait for initial output to be done in main.
-	<-ff.ch
-
-	// Range over lines that come in, actually a channel of line structs
-	for line := range ff.tail.Lines {
-		linePrinter.print(ff.path, line.Text)
-	}
 }
 
 func colour(colour int, input ...string) string {
@@ -280,12 +274,6 @@ func colour(colour int, input ...string) string {
 // head is true and startAtOffset is true. Return lines as a string slice.
 // Return an error if for instance a filename is incorrect.
 func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string, int, error) {
-	// handle a panic
-	// defer func() {
-	// 	if err := recover(); err != nil {
-	// 	}
-	// }()
-
 	totalLines := 0
 
 	// Declare here to ensure that defer works as it should
