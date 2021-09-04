@@ -14,7 +14,8 @@ does not have the ability to use bytes as the offset, it only uses lines (`-n`).
 Unlike the standard `tail`, this implementation has a `-H` (head) flag and
 produces coloured output for file paths. Colour output can be turned off using
 the `-C` flag. This implementation also allows for a small amount of extra
-formatting to be added using the `-p` (pretty) flag.
+formatting to be added using the `-p` (pretty) flag and for the output to
+include line numbers for non-followed output using the `-N` flag.
 
 ## Arguments
 
