@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -96,7 +97,8 @@ func setrlimit(limit uint64) syscall.Rlimit {
 	or stderr.
 */
 
-var linePrinter *printer // A struct to handle printing lines
+var printerOnce sync.Once // used to ensure printer instantiated only once
+var linePrinter *printer  // A struct to handle printing lines
 
 var useColour = true   // use colour - defaults to true
 var usePolling = false // use polling - defaults to inotify
@@ -134,11 +136,14 @@ type printer struct {
 // Use package level linePrinter to enforce singleton pattern, as that is the
 // needed pattern at this point.
 func newPrinter() *printer {
-	if linePrinter == nil {
-		linePrinter = new(printer)
-	} else {
+	if linePrinter != nil {
 		return linePrinter
 	}
+	// Ensure linePrinter is set up only once
+	printerOnce.Do(func() {
+		linePrinter = new(printer)
+	})
+
 	// initialize to empty string
 	linePrinter.setPath("")
 	linePrinter.messages = make(chan (msg))
