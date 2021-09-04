@@ -49,7 +49,7 @@ go.mod if there is a complaint on trying to compile. This should be compatible
 with earlier versions of Go like 1.14 and 1.15 though I have not checked. This
 app does not use embedding, which appeared in Go 1.16.
 
-`go build tail.go`
+`go build tail.go -o gotail`
 
 To build for Windows, for which there is an existing equivalent whose syntax I
 always forget. 
@@ -69,7 +69,8 @@ being used should work. I have yet to test on Windows.
 
 If you don't provide the file to compile the built app will be named whatever
 the directory from the repository is named. In this case the app would be
-compiled to be named `Ian-Challenge`. 
+compiled to be named `tail`. It might be best to call the compiled binary
+something like `gotail`. 
 
 The app can be run without building by typing
 
