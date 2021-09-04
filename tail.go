@@ -205,7 +205,7 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 
 	// Use leaky bucket algorithm to rate limit output.
 	// The setting used has not been tested.
-	lb := ratelimiter.NewLeakyBucket(10, 1*time.Millisecond)
+	lb := ratelimiter.NewLeakyBucket(1000, 1*time.Millisecond)
 
 	config := tail.Config{Follow: true, RateLimiter: lb, ReOpen: false, Poll: false, Location: &si}
 	if followTrack {
