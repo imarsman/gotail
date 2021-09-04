@@ -1,4 +1,4 @@
-# tail
+# tail (gotail)
 
 This is an implementation of part of the tail command, which was used in PWB
 UNIX, out of Bell Labs, in 1977. The tail command does lots of things, most
