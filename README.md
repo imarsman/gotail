@@ -63,9 +63,9 @@ FYI the Windows command is:
 I have not tested the follow part on Windows. This app uses a follow library and
 keeping track of files that get appended to is done idiosynchratically on
 Windows. If there is an issue the tail package allows for a different strategy
-to be used for tracking file changes. I could add in support for handling that.
-The app works well on MacOS, though the built in tail command is ridiculously
-small and efficient.
+to be used for tracking file changes. I  have added a `-P` option to use polling
+rather than the native follow. From what I can tell, though, the tail library
+being used should work. I have yet to test on Windows.
 
 If you don't provide the file to compile the built app will be named whatever
 the directory from the repository is named. In this case the app would be
