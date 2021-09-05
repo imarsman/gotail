@@ -422,9 +422,7 @@ func main() {
 	}
 
 	if headFlag && followFlag {
-		out := os.Stderr
-		fmt.Fprintln(out, colour(brightRed, "Can't use -H and -f together. Exiting with usage information."))
-		printHelp(out)
+		followFlag = false
 	}
 
 	if helpFlag == true {
@@ -612,11 +610,12 @@ func main() {
 		}
 
 		if !headFlag && followFlag {
-			ff, err := newFollowedFileForPath(args[i])
-			followedFiles = append(followedFiles, ff)
-			if err != nil {
-				panic(err)
-			}
+			followFlag = false
+			// ff, err := newFollowedFileForPath(args[i])
+			// followedFiles = append(followedFiles, ff)
+			// if err != nil {
+			// 	panic(err)
+			// }
 		}
 
 		// This is what the tail command does - leave a space before file name

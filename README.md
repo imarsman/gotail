@@ -27,9 +27,9 @@ The arguments are as follows:
    * when the `+` prefix is used `-H` is assumed (e.g. `-n +10`) and causes
      printout to start at `-n` lines into file
  * `-f`	follow new file lines but don't recover from reopened or renamed files
-   * this will fail if the `-H` option is specified
+   * `-f` flag is ignored with `-H`
  * `-F`	follow new file lines and handle reopened or renamed files
-   * this will fail if the `-H` option is specified
+   * `-f` flag is ignored with `-H`
  * `-P` use polling instead of OS file system events (slower but may be required
    on Windows).
  * `-p`	print extra formatting to output if more than one file is listed
@@ -38,7 +38,7 @@ The arguments are as follows:
  * `-H`	print head of file rather than tail - assumed with `+` in `-n` value
    * gives equivalent functionality to head command, except that the head
      command does not support the `+` option
-   * fails with `-f` option
+   * `-f` flag is ignored with `-H`
 
 One possible extension would be to periodically look for new files and add them
 to a followed list.
