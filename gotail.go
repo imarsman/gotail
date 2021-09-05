@@ -610,12 +610,12 @@ func main() {
 		}
 
 		if !headFlag && followFlag {
-			followFlag = false
-			// ff, err := newFollowedFileForPath(args[i])
-			// followedFiles = append(followedFiles, ff)
-			// if err != nil {
-			// 	panic(err)
-			// }
+			// followFlag = false
+			ff, err := newFollowedFileForPath(args[i])
+			followedFiles = append(followedFiles, ff)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		// This is what the tail command does - leave a space before file name
