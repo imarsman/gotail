@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"regexp"
@@ -203,11 +204,11 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 	// Set seek location in bytes, with reference to start of file.
 	si := tail.SeekInfo{Offset: size, Whence: 0}
 
-	// Use leaky bucket algorithm to rate limit output.
-	// The size is the bucket capacity before rate limiting begins. After that,
-	// the leak interval kicks in. If the size is too small a spurt of new lines
-	// will cause the tail package to cease tailing for a period of time.
-	// Initially the size was set to 10 and that was insufficient.
+	// Use leaky bucket algorithm to rate limit output. Implemented by tail
+	// package. The size is the bucket capacity before rate limiting begins.
+	// After that, the leak interval kicks in. If the size is too small a spurt
+	// of new lines will cause the tail package to cease tailing for a period of
+	// time. Initially the size was set to 10 and that was insufficient.
 	lb := ratelimiter.NewLeakyBucket(1000, 1*time.Millisecond)
 
 	config := tail.Config{Follow: true, RateLimiter: lb, ReOpen: false, Poll: false, Location: &si}
@@ -562,8 +563,9 @@ func main() {
 				}
 			}
 		}
-		// Don't add a newline
-		fmt.Print(builder.String())
+
+		// Write out what was recieved with no added newline
+		io.WriteString(os.Stdout, builder.String())
 	}
 
 	// Use stdin if available
