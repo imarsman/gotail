@@ -36,6 +36,8 @@ The arguments are as follows:
  * `-C`	no colour output
  * `-N`	show line numbers
  * `-H`	print head of file rather than tail - assumed with `+` in `-n` value
+   * gives equivalent functionality to head command, except that the head
+     command does not support the `+` option
    * fails with `-f` option
 
 One possible extension would be to periodically look for new files and add them
@@ -49,7 +51,7 @@ go.mod if there is a complaint on trying to compile. This should be compatible
 with earlier versions of Go like 1.14 and 1.15 though I have not checked. This
 app does not use embedding, which appeared in Go 1.16.
 
-`go build tail.go -o gotail`
+`go build gotail.go`
 
 To build for Windows, for which there is an existing equivalent whose syntax I
 always forget. 
@@ -74,13 +76,13 @@ something like `gotail`.
 
 The app can be run without building by typing
 
-`go run tail.go`
+`go run gotail.go`
 
 Somewhat surprisingly, file globbing works for path patterns that contain the
 `*` character. I have not read the source code of the flag package but the logic
 to intepret globbing patterns as paths must be in there. Thus this works:
 
-`./tail -N -n 15 sample/*.txt`
+`gotail -N -n 15 sample/*.txt`
 
 The code is stuctured to limit memory usage. The buffer used to read in lines
 only allocates to the lines slice when it is within range (for tail or head) and
