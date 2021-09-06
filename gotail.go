@@ -193,7 +193,7 @@ type followedFile struct {
 }
 
 // newFollowedFileForPath create a new file that will start tailing
-func newFollowedFileForPath(path string) (*followedFile, error) {
+func newFollowedFileForPath(path string) (followed *followedFile, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -227,28 +227,28 @@ func newFollowedFileForPath(path string) (*followedFile, error) {
 
 	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	ff := followedFile{}
-	ff.tail = tf
-	ff.path = path
+	followed = &followedFile{}
+	followed.tail = tf
+	followed.path = path
 
 	// make channel to use to wait for initial lines to be tailed
-	ff.ch = make(chan struct{})
+	followed.ch = make(chan struct{})
 
 	// Using anonymous function to avoid having this called separately
 	go func() {
 		// Wait for initial output to be done in main.
-		<-ff.ch
+		<-followed.ch
 
 		// Range over lines that come in, actually a channel of line structs
-		for line := range ff.tail.Lines {
-			linePrinter.print(ff.path, line.Text)
+		for line := range followed.tail.Lines {
+			linePrinter.print(followed.path, line.Text)
 		}
 	}()
 
-	return &ff, nil
+	return
 }
 
 func colour(colour int, input ...string) string {
@@ -277,9 +277,7 @@ func colour(colour int, input ...string) string {
 // getLines get linesWanted lines or start gathering lines at linesWanted if
 // head is true and startAtOffset is true. Return lines as a string slice.
 // Return an error if for instance a filename is incorrect.
-func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string, int, error) {
-	totalLines := 0
-
+func getLines(path string, head, startAtOffset bool, linesWanted int) (lines []string, totalLines int, err error) {
 	// Declare here to ensure that defer works as it should
 	var file *os.File
 
@@ -291,13 +289,11 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string,
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner = bufio.NewScanner(os.Stdin)
 	} else {
-		var err error
-
 		file, err = os.Open(path)
 		if err != nil {
 			// Something wrong like bad file path
 			fmt.Fprintln(os.Stderr, err.Error())
-			return nil, totalLines, err
+			return
 		}
 
 		// Deferring in case an error occurs
@@ -307,7 +303,7 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string,
 
 	// Use a slice the capacity of the number of lines wanted. In the case of
 	// offset from head this will be less efficient as re-allocation will be done.
-	var lines = make([]string, 0, linesWanted)
+	lines = make([]string, 0, linesWanted)
 
 	// Tell scanner to scan by lines.
 	scanner.Split(bufio.ScanLines)
@@ -365,7 +361,7 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) ([]string,
 		return []string{}, totalLines, scanner.Err()
 	}
 
-	return lines, totalLines, nil
+	return
 }
 
 // printHelp print out simple help output
@@ -610,7 +606,6 @@ func main() {
 		}
 
 		if !headFlag && followFlag {
-			// followFlag = false
 			ff, err := newFollowedFileForPath(args[i])
 			followedFiles = append(followedFiles, ff)
 			if err != nil {
