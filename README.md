@@ -106,4 +106,10 @@ To see what the Go compiler does with the code type:
 
   `go build -gcflags '-m -m' ./*.go 2>&1 |less`
 
+## Notes
+
+The argument parsing library used here does not deal with arguments such as -1,
+-2, -, etc. It may be that an argument will need to have a different identifier to
+work around this.
+
 -- Ian A. Marsman
