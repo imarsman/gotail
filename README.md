@@ -67,20 +67,7 @@ GOOS=windows GOARCH=amd64 go build -o gotail.exe
 
 For a different architectu specify a different GOOS and GOARCH.
 
-The app can be built by typing the command below (with a Go 1.16 compiler). If
-you have an older version of Go installed you can change the version number in
-go.mod if there is a complaint on trying to compile. This should be compatible
-with earlier versions of Go like 1.14 and 1.15 though I have not checked. This
-app does not use embedding, which appeared in Go 1.16.
-
-`go build gotail.go`
-
-To build for Windows, for which there is an existing equivalent whose syntax I
-always forget. 
-
-`GOOS=windows GOOARCH=amd64 go build -o tail-windows .`
-
-FYI the Windows command is:
+The Windows "tail" command is:
 
 `Get-Content <filename> -Wait -Tail 30`
 
