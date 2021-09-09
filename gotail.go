@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/jwalton/gchalk"
@@ -89,23 +88,14 @@ var rlimit uint64
 	does what a mutex would do and has the benefit of allowing a simple message
 	with path and line to be sent in the channel.
 */
-func setrlimit(limit uint64) syscall.Rlimit {
-	var rLimit syscall.Rlimit
-	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-	if err != nil {
-		fmt.Println("Error Getting Rlimit ", err)
-	}
-	rLimit.Cur = limit
-	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-	if err != nil {
-		fmt.Println("Error Setting Rlimit ", err)
-	}
-	err = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-	if err != nil {
-		fmt.Println("Error Getting Rlimit ", err)
-	}
 
-	return rLimit
+// type rl struct {
+// 	Cur uint64
+// 	Max uint64
+// }
+
+func callSetRLimit(limit uint64) (err error) {
+	return
 }
 
 func init() {
@@ -219,11 +209,6 @@ func newFollowedFileForPath(path string) (followed *followedFile, err error) {
 	if usePolling == true {
 		config.Poll = true
 	}
-
-	// fsnotify might not be as robust on Windows
-	// if runtime.GOOS == "windows" {
-	//	config.Poll = true
-	// }
 
 	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
 	if err != nil {
