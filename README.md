@@ -45,6 +45,28 @@ to a followed list.
 
 ## Building and Running
 
+This build requires a build flag to be available to either use or not use
+sycall.RLimit. Windows does not support syscall.RLimit, so there re two files,
+gotail_windows.go and gotail_nonwindws.go, only one of which should be used when
+compiling. The windows one has an empty function to satisfy build checks but
+does not bring in the call to RLimit. You can use a sample script as a pointer
+for how to do the build. For example, the makewindows.sh script has:
+
+```shell
+#!/bin/bash
+
+GOOS=windows GOARCH=amd64 go build -o gotail.exe
+```
+makedarwin.sh has
+
+```shell
+#!/bin/bash
+
+GOOS=windows GOARCH=amd64 go build -o gotail.exe
+```
+
+For a different architectu specify a different GOOS and GOARCH.
+
 The app can be built by typing the command below (with a Go 1.16 compiler). If
 you have an older version of Go installed you can change the version number in
 go.mod if there is a complaint on trying to compile. This should be compatible
