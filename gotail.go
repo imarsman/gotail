@@ -89,11 +89,6 @@ var rlimit uint64
 	with path and line to be sent in the channel.
 */
 
-// type rl struct {
-// 	Cur uint64
-// 	Max uint64
-// }
-
 func callSetRLimit(limit uint64) (err error) {
 	return
 }
