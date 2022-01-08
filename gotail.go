@@ -340,6 +340,7 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) (lines []s
 	return
 }
 
+// args to use with go-args
 var args struct {
 	NoColour    bool     `arg:"-C" help:"no colour"`
 	Polling     bool     `arg:"-P" help:"polling - use file polling instead of inotify"`
