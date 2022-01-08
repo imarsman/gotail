@@ -1,0 +1,26 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  GREETING: gotail tasks
+
+tasks:
+  default:
+    cmds:
+      - echo "{{.GREETING}}"
+    silent: true
+  macosarm:
+    desc: build for macos ARM
+    cmds:
+      - GOOS=darwin GOARCH=arm64 go build -o gotail
+      - file ./gotail
+  macosamd:
+    desc: build for macos AMD
+    cmds:
+      - GOOS=darwin GOARCH=amd64 go build -o gotail
+      - file ./gotail
+  windowsamd:
+    desc: build for Windows
+    cmds:
+      - GOOS=windows GOARCH=amd64 go build -o gotail.exe
