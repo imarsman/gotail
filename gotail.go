@@ -52,7 +52,7 @@ const (
 */
 
 var printerOnce sync.Once                         // used to ensure printer instantiated only once
-var linePrinter *printer                          // A struct to handle printing lines
+var outputPrinter *linePrinter                    // A struct to handle printing lines
 var followedFiles = make([]*followedFile, 0, 100) // initialize followed files here
 
 var useColour = true   // use colour - defaults to true
@@ -95,7 +95,7 @@ func callSetRLimit(limit uint64) (err error) {
 
 func init() {
 	// We'll always get the same instance from newPrinter.
-	linePrinter = newPrinter()
+	outputPrinter = newLinePrinter()
 
 	rlimit = 1000
 
@@ -110,60 +110,60 @@ type msg struct {
 }
 
 // A printer is a central place for printing new lines.
-type printer struct {
+type linePrinter struct {
 	currentPath string
 	messages    chan (msg)
 }
 
-// newPrinter get new printer instance properly instantiated
+// newLinePrinter get new printer instance properly instantiated
 // Use package level linePrinter to enforce singleton pattern, as that is the
 // needed pattern at this point.
-func newPrinter() *printer {
-	if linePrinter != nil {
-		return linePrinter
+func newLinePrinter() *linePrinter {
+	if outputPrinter != nil {
+		return outputPrinter
 	}
 	// Ensure linePrinter is set up only once
 	printerOnce.Do(func() {
-		linePrinter = new(printer)
+		outputPrinter = new(linePrinter)
 	})
 
 	// initialize to empty string
-	linePrinter.setPath("")
-	linePrinter.messages = make(chan (msg))
+	outputPrinter.setPath("")
+	outputPrinter.messages = make(chan (msg))
 
 	// Print messages in goroutine to avoid exposing messages channel which has
 	// its own locking behaviour. Use of a channel avoids worries about race
 	// condition with incoming path compared to printer path. Previous code
 	// tried atomic values for path and a mutex instead of a channel.
 	go func() {
-		for m := range linePrinter.messages {
-			if linePrinter.getPath() == m.path {
+		for m := range outputPrinter.messages {
+			if outputPrinter.getPath() == m.path {
 				fmt.Println(m.line)
 				continue
 			}
 			// Print out a header and set new value for the path.
-			linePrinter.setPath(m.path)
+			outputPrinter.setPath(m.path)
 			fmt.Println()
 			fmt.Println(colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
 			fmt.Println(m.line)
 		}
 	}()
 
-	return linePrinter
+	return outputPrinter
 }
 
-func (p *printer) setPath(path string) {
+func (p *linePrinter) setPath(path string) {
 	p.currentPath = path
 }
 
-func (p *printer) getPath() string {
+func (p *linePrinter) getPath() string {
 	return p.currentPath
 }
 
 // print print lines from a followed file.
 // An anonymous function is started in newPrinter to handle additions to the
 // message channel.
-func (p *printer) print(path, line string) {
+func (p *linePrinter) print(path, line string) {
 	m := msg{path: path, line: line}
 	p.messages <- m
 }
@@ -215,7 +215,7 @@ func newFollowedFileForPath(path string) (followed *followedFile, err error) {
 
 		// Range over lines that come in, actually a channel of line structs
 		for line := range followed.tail.Lines {
-			linePrinter.print(followed.path, line.Text)
+			outputPrinter.print(followed.path, line.Text)
 		}
 	}()
 
