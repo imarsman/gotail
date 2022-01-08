@@ -50,23 +50,17 @@ This build requires a build flag to be available to either use or not use
 sycall.RLimit. Windows does not support syscall.RLimit, so there re two files,
 gotail_windows.go and gotail_nonwindws.go, only one of which should be used when
 compiling. The windows one has an empty function to satisfy build checks but
-does not bring in the call to RLimit. You can use a sample script as a pointer
-for how to do the build. For example, the makewindows.sh script has:
+does not bring in the call to RLimit.
 
-```shell
-#!/bin/bash
+The build is handled by the Taskfile.yml taskfile. If you don't want to use the
+Taskfile you can look at its contents and guess the call. Basically a build for
+any OS involves the use of the GOOS and GOARCH environment variables which are
+then used by the go build tool to use whichever build flag is appropriate. e.g.
+`// +build !windows`.
 
-GOOS=windows GOARCH=amd64 go build -o gotail.exe
-```
-makedarwin.sh has
+Here is a sample build invocation.
 
-```shell
-#!/bin/bash
-
-GOOS=windows GOARCH=amd64 go build -o gotail.exe
-```
-
-For a different architectu specify a different GOOS and GOARCH.
+`GOOS=darwin GOARCH=arm64 go build -o gotail`
 
 The Windows "tail" command is:
 
@@ -75,18 +69,8 @@ The Windows "tail" command is:
 I have not tested the follow part on Windows. This app uses a follow library and
 keeping track of files that get appended to is done idiosynchratically on
 Windows. If there is an issue the tail package allows for a different strategy
-to be used for tracking file changes. I  have added a `-P` option to use polling
-rather than the native follow. From what I can tell, though, the tail library
-being used should work. I have yet to test on Windows.
-
-If you don't provide the file to compile the built app will be named whatever
-the directory from the repository is named. In this case the app would be
-compiled to be named `tail`. It might be best to call the compiled binary
-something like `gotail`. 
-
-The app can be run without building by typing
-
-`go run gotail.go`
+to be used for tracking file changes. I have not implemented support for
+optional polling.
 
 Somewhat surprisingly, file globbing works for path patterns that contain the
 `*` character. I have not read the source code of the flag package but the logic
@@ -115,11 +99,5 @@ To run the benchmark, in the base directory type:
 To see what the Go compiler does with the code type:
 
   `go build -gcflags '-m -m' ./*.go 2>&1 |less`
-
-## Notes
-
-The argument parsing library used here does not deal with arguments such as -1,
--2, -, etc. It may be that an argument will need to have a different identifier to
-work around this.
 
 -- Ian A. Marsman
