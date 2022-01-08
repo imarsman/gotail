@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alexflint/go-arg"
 	"github.com/jwalton/gchalk"
 	"github.com/nxadm/tail"
 	"github.com/nxadm/tail/ratelimiter"
@@ -55,9 +55,9 @@ var printerOnce sync.Once                         // used to ensure printer inst
 var linePrinter *printer                          // A struct to handle printing lines
 var followedFiles = make([]*followedFile, 0, 100) // initialize followed files here
 
-var useColour = true         // use colour - defaults to true
-var usePolling = false       // use polling - defaults to inotify
-var followTrack bool = false // follow renamed or replaced files
+var useColour = true   // use colour - defaults to true
+var usePolling = false // use polling - defaults to inotify
+var followFlag bool    // follow renamed or replaced files
 
 var rlimit uint64
 
@@ -201,15 +201,6 @@ func newFollowedFileForPath(path string) (followed *followedFile, err error) {
 	// time. Initially the size was set to 10 and that was insufficient.
 	lb := ratelimiter.NewLeakyBucket(1000, 1*time.Millisecond)
 
-	config := tail.Config{Follow: true, RateLimiter: lb, ReOpen: false, Poll: false, Location: &si}
-	if followTrack {
-		config.ReOpen = true
-	}
-	// For now allow a flag
-	if usePolling == true {
-		config.Poll = true
-	}
-
 	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
 	if err != nil {
 		return
@@ -349,80 +340,60 @@ func getLines(path string, head, startAtOffset bool, linesWanted int) (lines []s
 	return
 }
 
-// printHelp print out simple help output
-func printHelp(out *os.File) {
-	fmt.Fprintln(out, colour(brightGreen, os.Args[0], "- a simple tail program"))
-	fmt.Fprintln(out, "Usage")
-	fmt.Fprintln(out, "- print tail (or head) n lines of one or more files")
-	fmt.Fprintln(out, "Example: tail -n 10 file1.txt file2.txt")
-	// Prints to stdout
-	flag.PrintDefaults()
-	os.Exit(0)
+var args struct {
+	NoColour    bool     `arg:"-C" help:"no colour"`
+	Polling     bool     `arg:"-P" help:"polling - use file polling instead of inotify"`
+	FollowFlag  bool     `arg:"-f" help:"follow new file lines."`
+	NumLinesStr string   `arg:"-n" default:"10" help:"number of lines - prefix '+' for head to start at line n"`
+	PrintExtra  bool     `arg:"-p" help:"print extra formatting to output if more than one file is listed"`
+	LineNumbers bool     `arg:"-N" help:"show line numbers"`
+	Head        bool     `arg:"-H" help:"print head of file rather than tail"`
+	Files       []string `arg:"positional" help:"files to tail"`
 }
 
 func main() {
-	var helpFlag bool
-	flag.BoolVar(&helpFlag, "h", false, "print usage")
+	arg.MustParse(&args)
 
-	var noColourFlag bool
-	flag.BoolVar(&noColourFlag, "C", false, "no colour output")
+	if args.NumLinesStr == "" {
+		args.NumLinesStr = "10"
+	}
+
+	var noColourFlag = args.NoColour
 
 	// Flag for whether to start tail partway into a file
 	var startAtOffset bool
 
-	flag.BoolVar(&usePolling, "P", false, "use polling instead of OS file system events (slower).")
+	usePolling = args.Polling // consider removing and only supporting OS follow
+	followFlag = args.FollowFlag
 
-	flag.BoolVar(&followTrack, "F", false, "follow new file lines and track file changes.")
-
-	var followFlag bool
-	flag.BoolVar(&followFlag, "f", false, "follow new file lines. No change tracking.")
-
+	var numLinesStr = args.NumLinesStr
 	var numLines int
-	var numLinesStr string
-	flag.StringVar(&numLinesStr, "n", "10", "number of lines - prefix '+' for head to start at line n")
-
-	var prettyFlag bool
-	flag.BoolVar(&prettyFlag, "p", false, "print extra formatting to output if more than one file is listed")
-
-	var printLinesFlag bool
-	flag.BoolVar(&printLinesFlag, "N", false, "show line numbers")
-
-	var headFlag bool
-	flag.BoolVar(&headFlag, "H", false, "print head of file rather than tail")
-
-	flag.Parse()
+	var prettyFlag = args.PrintExtra
+	var printLinesFlag = args.LineNumbers
+	var headFlag = args.Head
 
 	if noColourFlag {
 		useColour = false
 	}
 
-	// Track file changes. Set follow to true as well. followTrack is used
-	// elsewhere in the package where the tail process is set up.
-	if followTrack {
-		followFlag = true
-	}
-
+	// Set follow flag to false if this is a file head call
+	// This is relied upon later
 	if headFlag && followFlag {
 		followFlag = false
-	}
-
-	if helpFlag == true {
-		out := os.Stdout
-		printHelp(out)
 	}
 
 	justDigits, err := regexp.MatchString(`^[0-9]+$`, numLinesStr)
 	if err != nil {
 		out := os.Stderr
 		fmt.Fprintln(out, colour(brightRed, "Got error", err.Error()))
-		printHelp(out)
+		os.Exit(1)
 	}
 	if justDigits == false {
 		// Test for + prefix. Complain later if something else is wrong
 		if !strings.HasPrefix(numLinesStr, "+") {
 			out := os.Stderr
 			fmt.Fprintln(out, colour(brightRed, "Invalid -n value", numLinesStr, ". Exiting with usage information."))
-			printHelp(out)
+			os.Exit(1)
 		}
 	}
 
@@ -437,7 +408,7 @@ func main() {
 		if err != nil {
 			out := os.Stderr
 			fmt.Fprintln(out, colour(brightRed, "Invalid -n value", nStrOrig, ". Exiting with usage information."))
-			printHelp(out)
+			os.Exit(1)
 		}
 		// Assume head if we got an offset
 		headFlag = true
@@ -449,7 +420,7 @@ func main() {
 		if err != nil {
 			out := os.Stderr
 			fmt.Fprintln(out, colour(brightRed, "invalid -n value", numLinesStr, ". Exiting with usage information."))
-			printHelp(out)
+			os.Exit(1)
 		}
 	}
 
@@ -561,37 +532,34 @@ func main() {
 		os.Exit(0)
 	}
 
-	// args are interpreted as paths
-	args := flag.Args()
+	var files = args.Files
 
 	// For printing out file information when > 1 file being processed
-	multipleFiles = len(args) > 1 // Are multiple files to be printed
+	multipleFiles = len(files) > 1 // Are multiple files to be printed
 
-	if len(args) == 0 {
+	if len(files) == 0 {
 		out := os.Stderr
 		fmt.Fprintln(out, colour(brightRed, "No files specified. Exiting with usage information."))
-		printHelp(out)
+		os.Exit(1)
 	}
 
-	// var followedFiles = make([]*followedFile, 0, len(args))
-
 	// Guard against handling too many files
-	if len(args) > int(rlimit) {
+	if len(files) > int(rlimit) {
 		fmt.Fprintf(os.Stderr, "Too many files specified. Max is %d\n", rlimit)
 		os.Exit(1)
 	}
 
 	// Iterate through file path args
-	for i := 0; i < len(args); i++ {
+	for i := 0; i < len(files); i++ {
 		// fmt.Println("file", args[i], "i", i)
-		lines, total, err := getLines(args[i], headFlag, startAtOffset, numLines)
+		lines, total, err := getLines(files[i], headFlag, startAtOffset, numLines)
 		if err != nil {
 			// there was a problem such as a ban file path
 			continue
 		}
 
-		if !headFlag && followFlag {
-			ff, err := newFollowedFileForPath(args[i])
+		if followFlag {
+			ff, err := newFollowedFileForPath(files[i])
 			followedFiles = append(followedFiles, ff)
 			if err != nil {
 				panic(err)
@@ -599,10 +567,10 @@ func main() {
 		}
 
 		// This is what the tail command does - leave a space before file name
-		if i > 0 && len(args) > 1 {
+		if i > 0 && len(files) > 1 {
 			fmt.Println()
 		}
-		write(args[i], headFlag, lines, total)
+		write(files[i], headFlag, lines, total)
 	}
 
 	// Write to channel for each followed file to release them to follow.
@@ -611,7 +579,7 @@ func main() {
 	}
 
 	// Wait to exit if files being followed
-	if followFlag && !headFlag {
+	if followFlag {
 		// fmt.Printf("active files %+v", activeFiles)
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt)
