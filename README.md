@@ -21,24 +21,25 @@ include line numbers for non-followed output using the `-N` flag.
 
 The arguments are as follows:
 
- * `-h` print usage
- * `-n` string
-   * number of lines to print from tail or head of file
-   * when the `+` prefix is used `-H` is assumed (e.g. `-n +10`) and causes
-     printout to start at `-n` lines into file
- * `-f`	follow new file lines but don't recover from reopened or renamed files
-   * `-f` flag is ignored with `-H`
- * `-F`	follow new file lines and handle reopened or renamed files
-   * `-f` flag is ignored with `-H`
- * `-P` use polling instead of OS file system events (slower but may be required
-   on Windows).
- * `-p`	print extra formatting to output if more than one file is listed
- * `-C`	no colour output
- * `-N`	show line numbers
- * `-H`	print head of file rather than tail - assumed with `+` in `-n` value
-   * gives equivalent functionality to head command, except that the head
-     command does not support the `+` option
-   * `-f` flag is ignored with `-H`
+```
+% gotail -h
+Usage: gotail [--nocolour] [--polling] [--followflag] [--numlinesstr NUMLINESSTR] [--printextra] 
+   [--linenumbers] [--head] [FILES [FILES ...]]
+
+Positional arguments:
+  FILES                  files to tail
+
+Options:
+  --nocolour, -C         no colour
+  --polling, -P          polling - use file polling instead of inotify
+  --followflag, -f       follow new file lines.
+  --numlinesstr NUMLINESSTR, -n NUMLINESSTR
+                         number of lines - prefix '+' for head to start at line n [default: 10]
+  --printextra, -p       print extra formatting to output if more than one file is listed
+  --linenumbers, -N      show line numbers
+  --head, -H             print head of file rather than tail
+  --help, -h             display this help and exit
+```
 
 One possible extension would be to periodically look for new files and add them
 to a followed list.
