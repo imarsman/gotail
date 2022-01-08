@@ -17,6 +17,10 @@ the `-C` flag. This implementation also allows for a small amount of extra
 formatting to be added using the `-p` (pretty) flag and for the output to
 include line numbers for non-followed output using the `-N` flag.
 
+Along with the switch to using the go-arg commandline argument handling package
+a general review was carried out that allowed interim logic to be removed from
+code.
+
 ## Arguments
 
 The arguments are as follows:
@@ -61,6 +65,13 @@ then used by the go build tool to use whichever build flag is appropriate. e.g.
 Here is a sample build invocation.
 
 `GOOS=darwin GOARCH=arm64 go build -o gotail`
+
+Because of the OS specific build flag the `GOOS` environment variable must be
+set if using `go run`. For example
+
+`GOOS=darwin go run . ./gotail.go`. This will give the Go compiler enough
+information to selectively use the build flag module such as
+`gotail_nonwindows.go`. I have not tested out many alternate run parameters.
 
 The Windows "tail" command is:
 
