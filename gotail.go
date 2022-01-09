@@ -40,11 +40,11 @@ const (
 	resources. This is mostly a test but it seems to work well so far.
 
 	// Regular tail
-	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | tail -n +100 >/dev/null
+	$: time cat /var/log/wifi.log | tail -n +100 >/dev/null
 	real	0m0.011s
 
 	// This tail
-	$: time cat /var/log/wifi-08-31-2021__09:26:50.999.log | gotail -H -n +100 >/dev/null
+	$: time cat /var/log/wifi.log | gotail -H -n +100 >/dev/null
 	real	0m0.006s
 
 	There is likely more to do in terms of directing output properly to stdout
