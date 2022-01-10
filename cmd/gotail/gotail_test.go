@@ -1,4 +1,4 @@
-package main
+package gotail
 
 import (
 	"fmt"
@@ -100,7 +100,7 @@ func BenchmarkGetLines(b *testing.B) {
 
 // BenchmarkPrintLines benchmark line printing with a path change every call
 func BenchmarkPrintLines(b *testing.B) {
-	printer := newPrinter()
+	printer := newLinePrinter()
 	origOut := os.Stdout
 	// Disable stdout for benchmark
 	os.Stdout = nil
@@ -123,7 +123,7 @@ func BenchmarkPrintLines(b *testing.B) {
 
 // BenchmarkPrintLinesWithNoPathChange benchmark line printing with no path changes
 func BenchmarkPrintLinesWithNoPathChange(b *testing.B) {
-	printer := newPrinter()
+	printer := newLinePrinter()
 	origOut := os.Stdout
 	// Disable stdout for benchmark
 	os.Stdout = nil
