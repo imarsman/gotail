@@ -118,7 +118,7 @@ func main() {
 	if noColourFlag {
 		useColour = false
 	}
-	output.SetColour(useColour)
+	output.SetColour(useColour) // Set colour output for the run of this app
 
 	// Set follow flag to false if this is a file head call
 	// This is relied upon later
