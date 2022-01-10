@@ -100,7 +100,7 @@ func BenchmarkGetLines(b *testing.B) {
 
 // BenchmarkPrintLines benchmark line printing with a path change every call
 func BenchmarkPrintLines(b *testing.B) {
-	printer := NewLinePrinter()
+	printer := newLinePrinter()
 	origOut := os.Stdout
 	// Disable stdout for benchmark
 	os.Stdout = nil
@@ -113,7 +113,7 @@ func BenchmarkPrintLines(b *testing.B) {
 			// Change path on each run
 			r := rand.Intn(100)
 			s := fmt.Sprint(r)
-			printer.Print(s, "hello")
+			printer.print(s, "hello")
 		}
 	})
 
@@ -123,7 +123,7 @@ func BenchmarkPrintLines(b *testing.B) {
 
 // BenchmarkPrintLinesWithNoPathChange benchmark line printing with no path changes
 func BenchmarkPrintLinesWithNoPathChange(b *testing.B) {
-	printer := NewLinePrinter()
+	printer := newLinePrinter()
 	origOut := os.Stdout
 	// Disable stdout for benchmark
 	os.Stdout = nil
@@ -133,7 +133,7 @@ func BenchmarkPrintLinesWithNoPathChange(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			printer.Print("", "hello")
+			printer.print("", "hello")
 		}
 	})
 
