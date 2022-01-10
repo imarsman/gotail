@@ -8,18 +8,15 @@ import (
 )
 
 const (
-	brightGreen = iota
-	brightYellow
-	brightBlue
-	brightRed
-	noColour // Can use to default to no colour output
-)
-
-const (
+	// BrightGreen bright green output colour
 	BrightGreen = iota
+	// BrightYellow bright yellow output colour
 	BrightYellow
+	// BrightBlue bright blue output colour
 	BrightBlue
+	// BrightRed bright red output colour
 	BrightRed
+	// NoColour no output colour
 	NoColour // Can use to default to no colour output
 )
 
@@ -41,13 +38,13 @@ func OutputColour(colour int, input ...string) string {
 
 	// Choose colour for output or none
 	switch colour {
-	case brightGreen:
+	case BrightGreen:
 		return gchalk.BrightGreen(str)
-	case brightYellow:
+	case BrightYellow:
 		return gchalk.BrightYellow(str)
-	case brightBlue:
+	case BrightBlue:
 		return gchalk.BrightBlue(str)
-	case brightRed:
+	case BrightRed:
 		return gchalk.BrightRed(str)
 	default:
 		return str
