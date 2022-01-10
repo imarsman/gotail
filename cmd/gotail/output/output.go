@@ -1,4 +1,4 @@
-package output
+package main
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/imarsman/gotail/cmd/gotail"
 	"github.com/nxadm/tail"
+
 	"github.com/nxadm/tail/ratelimiter"
 )
 
@@ -68,7 +68,7 @@ func NewLinePrinter() *LinePrinter {
 			// Print out a header and set new value for the path.
 			outputPrinter.setPath(m.path)
 			fmt.Println()
-			fmt.Println(gotail.Colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
+			fmt.Println(Colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
 			fmt.Println(m.line)
 		}
 	}()
@@ -87,7 +87,7 @@ func (p *LinePrinter) getPath() string {
 // print print lines from a followed file.
 // An anonymous function is started in newPrinter to handle additions to the
 // message channel.
-func (p *LinePrinter) print(path, line string) {
+func (p *LinePrinter) Print(path, line string) {
 	m := msg{path: path, line: line}
 	p.messages <- m
 }
@@ -144,7 +144,7 @@ func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
 
 		// Range over lines that come in, actually a channel of line structs
 		for line := range followed.tail.Lines {
-			outputPrinter.print(followed.path, line.Text)
+			outputPrinter.Print(followed.path, line.Text)
 		}
 	}()
 

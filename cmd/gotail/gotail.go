@@ -1,4 +1,4 @@
-package gotail
+package main
 
 import (
 	"bufio"
@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/alexflint/go-arg"
-	"github.com/imarsman/gotail/cmd/internal/output"
 	"github.com/jwalton/gchalk"
 	"github.com/nxadm/tail"
 )
@@ -51,7 +50,7 @@ const (
 
 // var printerOnce sync.Once                         // used to ensure printer instantiated only once
 // var outputPrinter *linePrinter                    // A struct to handle printing lines
-var followedFiles = make([]*output.FollowedFile, 0, 100) // initialize followed files here
+var followedFiles = make([]*FollowedFile, 0, 100) // initialize followed files here
 
 var useColour = true   // use colour - defaults to true
 var usePolling = false // use polling - defaults to inotify
@@ -225,6 +224,7 @@ func (ff *followedFile) unlock() {
 // 	return
 // }
 
+// Colour print in colour
 func Colour(colour int, input ...string) string {
 	str := fmt.Sprint(strings.Join(input, " "))
 	str = strings.Replace(str, "  ", " ", -1)
