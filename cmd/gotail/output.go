@@ -11,20 +11,12 @@ import (
 	"github.com/nxadm/tail/ratelimiter"
 )
 
-const (
-	brightGreen = iota
-	brightYellow
-	brightBlue
-	brightRed
-	noColour // Can use to default to no colour output
-)
-
 var printerOnce sync.Once      // used to ensure printer instantiated only once
-var outputPrinter *LinePrinter // A struct to handle printing lines
+var outputPrinter *linePrinter // A struct to handle printing lines
 
 func init() {
 	// We'll always get the same instance from newPrinter.
-	outputPrinter = NewLinePrinter()
+	outputPrinter = newLinePrinter()
 }
 
 // a message to be sent when following a file
@@ -34,21 +26,21 @@ type msg struct {
 }
 
 // A printer is a central place for printing new lines.
-type LinePrinter struct {
+type linePrinter struct {
 	currentPath string
 	messages    chan (msg)
 }
 
-// NewLinePrinter get new printer instance properly instantiated
+// newLinePrinter get new printer instance properly instantiated
 // Use package level linePrinter to enforce singleton pattern, as that is the
 // needed pattern at this point.
-func NewLinePrinter() *LinePrinter {
+func newLinePrinter() *linePrinter {
 	if outputPrinter != nil {
 		return outputPrinter
 	}
 	// Ensure linePrinter is set up only once
 	printerOnce.Do(func() {
-		outputPrinter = new(LinePrinter)
+		outputPrinter = new(linePrinter)
 	})
 
 	// initialize to empty string
@@ -76,18 +68,18 @@ func NewLinePrinter() *LinePrinter {
 	return outputPrinter
 }
 
-func (p *LinePrinter) setPath(path string) {
+func (p *linePrinter) setPath(path string) {
 	p.currentPath = path
 }
 
-func (p *LinePrinter) getPath() string {
+func (p *linePrinter) getPath() string {
 	return p.currentPath
 }
 
 // print print lines from a followed file.
 // An anonymous function is started in newPrinter to handle additions to the
 // message channel.
-func (p *LinePrinter) Print(path, line string) {
+func (p *linePrinter) Print(path, line string) {
 	m := msg{path: path, line: line}
 	p.messages <- m
 }
@@ -102,7 +94,7 @@ type FollowedFile struct {
 }
 
 // unlock channel for file by writing to channel
-func (ff *FollowedFile) Unlock() {
+func (ff *FollowedFile) unlock() {
 	ff.ch <- *new(struct{})
 }
 

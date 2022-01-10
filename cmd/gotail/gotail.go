@@ -560,7 +560,7 @@ func main() {
 		}
 
 		if followFlag {
-			ff, err := output.NewFollowedFileForPath(files[i]) // define followed file
+			ff, err := NewFollowedFileForPath(files[i]) // define followed file
 			followedFiles = append(followedFiles, ff)
 			if err != nil {
 				panic(err)
@@ -576,7 +576,7 @@ func main() {
 
 	// Write to channel for each followed file to release them to follow.
 	for _, ff := range followedFiles {
-		ff.Unlock()
+		ff.unlock()
 	}
 
 	// Wait to exit if files being followed
