@@ -12,6 +12,10 @@ tasks:
     cmds:
       - echo "{{.GREETING}}"
     silent: true
+  test:
+    desc: run tests
+    cmds:
+      - cmd: go test -v ./...
   clearbin:
     desc: clear build in bin dir
     cmds:
