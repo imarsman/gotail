@@ -1,7 +1,12 @@
-package main
+package print
 
 import (
+	"fmt"
+	"math/rand"
+	"os"
 	"testing"
+
+	"github.com/matryer/is"
 )
 
 //                Tests and benchmarks
@@ -52,47 +57,57 @@ const (
 func init() {
 }
 
-func TestRLimit(t *testing.T) {
-	t.Logf("Limit %+v", setrlimit(1000))
-}
+func TestLinePrinter(t *testing.T) {
+	is := is.New(t)
 
-var sampleDir = "../../sample"
+	lp := newLinePrinter()
+	is.True(lp != nil)
+}
 
 // Get some lines
-func TestGetLines(t *testing.T) {
-	lines, total, err := getLines(sampleDir+"/1.txt", false, false, 10)
-	if err != nil {
-		t.Fail()
-	}
-	t.Log("lines", lines, "total", total)
-}
 
 // go test -run=XXX -bench=. -benchmem
 // BenchmarkGetLines-12    659.9 ns/op    15.15 MB/s    363 B/op    3 allocs/op
-func BenchmarkGetLines(b *testing.B) {
-	setrlimit(1000)
 
-	var lines []string
-	var total int
-	var err error
+// BenchmarkPrintLines benchmark line printing with a path change every call
+func BenchmarkPrintLines(b *testing.B) {
+	printer := newLinePrinter()
+	origOut := os.Stdout
+	// Disable stdout for benchmark
+	os.Stdout = nil
 
 	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
-	// Change rlimit prior to trying to run with this level of parallelism
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			lines, total, err = getLines(sampleDir+"/1.txt", false, false, 10)
+			// Change path on each run
+			r := rand.Intn(100)
+			s := fmt.Sprint(r)
+			printer.Print(s, "hello")
 		}
 	})
 
-	if len(lines) == 0 {
-		b.Fail()
-	}
-	if total == 0 {
-		b.Fail()
-	}
-	if err != nil {
-		b.Fail()
-	}
+	// Re-enable stdout
+	os.Stdout = origOut
+}
+
+// BenchmarkPrintLinesWithNoPathChange benchmark line printing with no path changes
+func BenchmarkPrintLinesWithNoPathChange(b *testing.B) {
+	printer := newLinePrinter()
+	origOut := os.Stdout
+	// Disable stdout for benchmark
+	os.Stdout = nil
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			printer.Print("", "hello")
+		}
+	})
+
+	// Re-enable stdout
+	os.Stdout = origOut
 }
