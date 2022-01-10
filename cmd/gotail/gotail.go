@@ -29,19 +29,18 @@ import (
 
 	// Regular tail
 	$: time cat /var/log/wifi.log | tail -n +100 >/dev/null
-	real	0m0.011s
+	tail -n +100 > /dev/null  0.01s user 0.00s system 83% cpu 0.010 total
 
 	// This tail
 	$: time cat /var/log/wifi.log | gotail -H -n +100 >/dev/null
-	real	0m0.006s
+	gotail -H -n +100 > /dev/null  0.00s user 0.00s system 70% cpu 0.011 total
 
 	There is likely more to do in terms of directing output properly to stdout
 	or stderr.
 */
 
-var useColour = true   // use colour - defaults to true
-var usePolling = false // use polling - defaults to inotify
-var followFlag bool    // follow renamed or replaced files
+var useColour = true // use colour - defaults to true
+var follow bool      // follow renamed or replaced files
 
 var rlimit uint64
 
@@ -83,8 +82,7 @@ func init() {
 // args to use with go-args
 var args struct {
 	NoColour    bool     `arg:"-C" help:"no colour"`
-	Polling     bool     `arg:"-P" help:"polling - use file polling instead of inotify"`
-	FollowFlag  bool     `arg:"-f" help:"follow new file lines."`
+	Follow      bool     `arg:"-f" help:"follow new file lines."`
 	NumLinesStr string   `arg:"-n" default:"10" help:"number of lines - prefix '+' for head to start at line n"`
 	PrintExtra  bool     `arg:"-p" help:"print extra formatting to output if more than one file is listed"`
 	LineNumbers bool     `arg:"-N" help:"show line numbers"`
@@ -106,14 +104,13 @@ func main() {
 	// Flag for whether to start tail partway into a file
 	var startAtOffset bool
 
-	usePolling = args.Polling // consider removing and only supporting OS follow
-	followFlag = args.FollowFlag
+	follow = args.Follow
 
 	var numLinesStr = args.NumLinesStr
 	var numLines int
-	var prettyFlag = args.PrintExtra
-	var printLinesFlag = args.LineNumbers
-	var headFlag = args.Head
+	var pretty = args.PrintExtra
+	var printLines = args.LineNumbers
+	var head = args.Head
 
 	if noColourFlag {
 		useColour = false
@@ -122,8 +119,8 @@ func main() {
 
 	// Set follow flag to false if this is a file head call
 	// This is relied upon later
-	if headFlag && followFlag {
-		followFlag = false
+	if head && follow {
+		follow = false
 	}
 
 	justDigits, err := regexp.MatchString(`^[0-9]+$`, numLinesStr)
@@ -155,7 +152,7 @@ func main() {
 			os.Exit(1)
 		}
 		// Assume head if we got an offset
-		headFlag = true
+		head = true
 		startAtOffset = true
 	} else {
 		var err error
@@ -188,7 +185,7 @@ func main() {
 		}
 
 		// Skips for single file and stdin
-		if prettyFlag == true && multipleFiles {
+		if pretty == true && multipleFiles {
 			builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
@@ -234,14 +231,14 @@ func main() {
 				}
 			}
 		}
-		if prettyFlag == true && multipleFiles {
+		if pretty == true && multipleFiles {
 			builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
 		index := 0
 		// Print out all lines for file using string builder.
 		for i := 0; i < len(lines); i++ {
-			if printLinesFlag == true {
+			if printLines == true {
 				if startAtOffset {
 					index = i + numLines
 				} else {
@@ -265,14 +262,14 @@ func main() {
 	// Use stdin if available
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		lines, total, err := input.GetLines("", headFlag, startAtOffset, numLines)
+		lines, total, err := input.GetLines("", head, startAtOffset, numLines)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			return
 		}
 
 		// write to stdout
-		write("", headFlag, lines, total)
+		write("", head, lines, total)
 		os.Exit(0)
 	}
 
@@ -296,13 +293,13 @@ func main() {
 	// Iterate through file path args and for each get then print out lines
 	for i := 0; i < len(files); i++ {
 		// fmt.Println("file", args[i], "i", i)
-		lines, total, err := input.GetLines(files[i], headFlag, startAtOffset, numLines)
+		lines, total, err := input.GetLines(files[i], head, startAtOffset, numLines)
 		if err != nil {
 			// there was a problem such as a ban file path
 			continue
 		}
 
-		if followFlag {
+		if follow {
 			ff, err := output.NewFollowedFileForPath(files[i]) // define followed file
 			output.FollowedFiles = append(output.FollowedFiles, ff)
 			if err != nil {
@@ -314,7 +311,7 @@ func main() {
 		if i > 0 && len(files) > 1 {
 			fmt.Println()
 		}
-		write(files[i], headFlag, lines, total)
+		write(files[i], head, lines, total)
 	}
 
 	// Write to channel for each followed file to release them to follow.
@@ -323,7 +320,7 @@ func main() {
 	}
 
 	// Wait to exit if files being followed
-	if followFlag {
+	if follow {
 		// fmt.Printf("active files %+v", activeFiles)
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt)
