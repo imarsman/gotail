@@ -60,7 +60,7 @@ func newLinePrinter() *linePrinter {
 			// Print out a header and set new value for the path.
 			outputPrinter.setPath(m.path)
 			fmt.Println()
-			fmt.Println(Colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
+			fmt.Println(outputColour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
 			fmt.Println(m.line)
 		}
 	}()
@@ -79,27 +79,27 @@ func (p *linePrinter) getPath() string {
 // print print lines from a followed file.
 // An anonymous function is started in newPrinter to handle additions to the
 // message channel.
-func (p *linePrinter) Print(path, line string) {
+func (p *linePrinter) print(path, line string) {
 	m := msg{path: path, line: line}
 	p.messages <- m
 }
 
-// FollowedFile a file being tailed (followed).
+// followedFile a file being tailed (followed).
 // Uses the tail library which has undoubtedly taken many hours to get working
 // well.
-type FollowedFile struct {
+type followedFile struct {
 	path string
 	tail *tail.Tail
 	ch   chan struct{}
 }
 
 // unlock channel for file by writing to channel
-func (ff *FollowedFile) unlock() {
+func (ff *followedFile) unlock() {
 	ff.ch <- *new(struct{})
 }
 
-// NewFollowedFileForPath create a new file that will start tailing
-func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
+// newFollowedFileForPath create a new file that will start tailing
+func newFollowedFileForPath(path string) (followed *followedFile, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
 		return
 	}
 
-	followed = &FollowedFile{}
+	followed = &followedFile{}
 	followed.tail = tf
 	followed.path = path
 
@@ -136,7 +136,7 @@ func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
 
 		// Range over lines that come in, actually a channel of line structs
 		for line := range followed.tail.Lines {
-			outputPrinter.Print(followed.path, line.Text)
+			outputPrinter.print(followed.path, line.Text)
 		}
 	}()
 
