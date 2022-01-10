@@ -79,10 +79,10 @@ func (p *linePrinter) getPath() string {
 	return p.currentPath
 }
 
-// Print Print lines from a followed file.
+// print print lines from a followed file.
 // An anonymous function is started in newPrinter to handle additions to the
 // message channel.
-func (p *linePrinter) Print(path, line string) {
+func (p *linePrinter) print(path, line string) {
 	m := msg{path: path, line: line}
 	p.messages <- m
 }
@@ -139,7 +139,7 @@ func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
 
 		// Range over lines that come in, actually a channel of line structs
 		for line := range followed.tail.Lines {
-			outputPrinter.Print(followed.path, line.Text)
+			outputPrinter.print(followed.path, line.Text)
 		}
 	}()
 
