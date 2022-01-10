@@ -67,7 +67,7 @@ func newLinePrinter() *linePrinter {
 			// Print out a header and set new value for the path.
 			outputPrinter.setPath(m.path)
 			fmt.Println()
-			fmt.Println(colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
+			fmt.Println(main.Colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
 			fmt.Println(m.line)
 		}
 	}()
