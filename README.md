@@ -21,6 +21,9 @@ Along with the switch to using the go-arg commandline argument handling package
 a general review was carried out that allowed interim logic to be removed from
 code.
 
+The code could possibly be re-organized into separate packages. As it stands
+file following and outputting code is in a separate file, `output.go`.
+
 ## Arguments
 
 The arguments are as follows:
