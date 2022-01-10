@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -11,7 +10,8 @@ import (
 	"strings"
 
 	"github.com/alexflint/go-arg"
-	"github.com/imarsman/gotail/cmd/gotail/print"
+	"github.com/imarsman/gotail/cmd/gotail/input"
+	"github.com/imarsman/gotail/cmd/gotail/output"
 )
 
 /*
@@ -38,8 +38,6 @@ import (
 	There is likely more to do in terms of directing output properly to stdout
 	or stderr.
 */
-
-// var followedFiles = make([]*followedFile, 0, 100) // initialize followed files here
 
 var useColour = true   // use colour - defaults to true
 var usePolling = false // use polling - defaults to inotify
@@ -69,10 +67,6 @@ var rlimit uint64
 	path header is added. Otherwise the path of the file is sent to stdout and
 	then the new line. Queuing for this is handled by a channel in the printer
 	struct.
-
-	Before the use of a channel for the printer a mutex was used. The channel
-	does what a mutex would do and has the benefit of allowing a simple message
-	with path and line to be sent in the channel.
 */
 
 func callSetRLimit(limit uint64) (err error) {
@@ -84,96 +78,6 @@ func init() {
 
 	// Set files limit
 	setrlimit(rlimit)
-}
-
-// getLines get linesWanted lines or start gathering lines at linesWanted if
-// head is true and startAtOffset is true. Return lines as a string slice.
-// Return an error if for instance a filename is incorrect.
-func getLines(path string, head, startAtOffset bool, linesWanted int) (lines []string, totalLines int, err error) {
-	// Declare here to ensure that defer works as it should
-	var file *os.File
-
-	// Define scanner that will be used either with a file or with stdin
-	var scanner *bufio.Scanner
-
-	// Use stdin if it is available. Path will be ignored.
-	stat, _ := os.Stdin.Stat()
-	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		scanner = bufio.NewScanner(os.Stdin)
-	} else {
-		file, err = os.Open(path)
-		if err != nil {
-			// Something wrong like bad file path
-			fmt.Fprintln(os.Stderr, err.Error())
-			return
-		}
-
-		// Deferring in case an error occurs
-		defer file.Close()
-		scanner = bufio.NewScanner(file)
-	}
-
-	// Use a slice the capacity of the number of lines wanted. In the case of
-	// offset from head this will be less efficient as re-allocation will be done.
-	lines = make([]string, 0, linesWanted)
-
-	// Tell scanner to scan by lines.
-	scanner.Split(bufio.ScanLines)
-
-	// Get head lines and return. Easiest option as we don't need to use slice
-	// tricks to get last lines.
-	if head {
-		// Handle starting at offset, get lines, then return
-		if startAtOffset {
-			totalLines = 1
-			for scanner.Scan() {
-				// Add to lines slice when in range
-				if totalLines >= linesWanted {
-					lines = append(lines, scanner.Text())
-				}
-				totalLines++
-			}
-			// scanner keeps track of non-EOF error
-			if scanner.Err() != nil {
-				return []string{}, totalLines, scanner.Err()
-			}
-
-			return lines, totalLines, nil
-		}
-		// not starting at offset so get head lines
-		totalLines = 0
-		for scanner.Scan() {
-			// Add to lines slice when in range
-			if totalLines < linesWanted {
-				lines = append(lines, scanner.Text())
-			}
-			totalLines++
-		}
-		// scanner keeps track of non-EOF error
-		if scanner.Err() != nil {
-			return []string{}, totalLines, scanner.Err()
-		}
-
-		return lines, totalLines, nil
-	}
-
-	// Get tail lines and return
-	totalLines = 0
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-		totalLines++
-		// Add to lines slice when in range
-		if totalLines > linesWanted {
-			// Get rid of the first element to keep this a "last" slice
-			lines = lines[1:]
-		}
-	}
-	// scanner keeps track of non-EOF error
-	if scanner.Err() != nil {
-		return []string{}, totalLines, scanner.Err()
-	}
-
-	return
 }
 
 // args to use with go-args
@@ -214,7 +118,7 @@ func main() {
 	if noColourFlag {
 		useColour = false
 	}
-	print.SetColour(useColour)
+	output.SetColour(useColour)
 
 	// Set follow flag to false if this is a file head call
 	// This is relied upon later
@@ -225,14 +129,14 @@ func main() {
 	justDigits, err := regexp.MatchString(`^[0-9]+$`, numLinesStr)
 	if err != nil {
 		out := os.Stderr
-		fmt.Fprintln(out, print.OutputColour(print.BrightRed, "Got error", err.Error()))
+		fmt.Fprintln(out, output.Colour(output.BrightRed, "Got error", err.Error()))
 		os.Exit(1)
 	}
 	if justDigits == false {
 		// Test for + prefix. Complain later if something else is wrong
 		if !strings.HasPrefix(numLinesStr, "+") {
 			out := os.Stderr
-			fmt.Fprintln(out, print.OutputColour(print.BrightRed, "Invalid -n value", numLinesStr, ". Exiting with usage information."))
+			fmt.Fprintln(out, output.Colour(output.BrightRed, "Invalid -n value", numLinesStr, ". Exiting with usage information."))
 			os.Exit(1)
 		}
 	}
@@ -247,7 +151,7 @@ func main() {
 		numLines, err = strconv.Atoi(numLinesStr)
 		if err != nil {
 			out := os.Stderr
-			fmt.Fprintln(out, print.OutputColour(print.BrightRed, "Invalid -n value", nStrOrig, ". Exiting with usage information."))
+			fmt.Fprintln(out, output.Colour(output.BrightRed, "Invalid -n value", nStrOrig, ". Exiting with usage information."))
 			os.Exit(1)
 		}
 		// Assume head if we got an offset
@@ -259,7 +163,7 @@ func main() {
 		numLines, err = strconv.Atoi(numLinesStr)
 		if err != nil {
 			out := os.Stderr
-			fmt.Fprintln(out, print.OutputColour(print.BrightRed, "invalid -n value", numLinesStr, ". Exiting with usage information."))
+			fmt.Fprintln(out, output.Colour(output.BrightRed, "invalid -n value", numLinesStr, ". Exiting with usage information."))
 			os.Exit(1)
 		}
 	}
@@ -285,19 +189,19 @@ func main() {
 
 		// Skips for single file and stdin
 		if prettyFlag == true && multipleFiles {
-			builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
+			builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), linesAvailable)))
+				builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), linesAvailable)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					extent := len(lines) + numLines - 1
-					builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), extent)))
+					builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), extent)))
 				}
 			}
 		} else {
@@ -306,32 +210,32 @@ func main() {
 
 			// No lines in file
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), pluralize("line", "lines", len(lines)))))
+				builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), pluralize("line", "lines", len(lines)))))
 			} else {
 				// With multiple files print out filename, etc. otherwise leave empty.
 				if multipleFiles {
 					if startAtOffset {
-						builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, linesAvailable, pluralize("line", "lines", linesAvailable))))
+						builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, linesAvailable, pluralize("line", "lines", linesAvailable))))
 					} else {
 						if head {
 							count := numLines
 							if numLines > linesAvailable {
 								count = linesAvailable
 							}
-							builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
+							builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
 						} else {
 							count := numLines
 							if numLines > linesAvailable {
 								count = linesAvailable
 							}
-							builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
+							builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
 						}
 					}
 				}
 			}
 		}
 		if prettyFlag == true && multipleFiles {
-			builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
+			builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
 		index := 0
@@ -361,7 +265,7 @@ func main() {
 	// Use stdin if available
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		lines, total, err := getLines("", headFlag, startAtOffset, numLines)
+		lines, total, err := input.GetLines("", headFlag, startAtOffset, numLines)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			return
@@ -379,7 +283,7 @@ func main() {
 
 	if len(files) == 0 {
 		out := os.Stderr
-		fmt.Fprintln(out, print.OutputColour(print.BrightRed, "No files specified. Exiting with usage information."))
+		fmt.Fprintln(out, output.Colour(output.BrightRed, "No files specified. Exiting with usage information."))
 		os.Exit(1)
 	}
 
@@ -392,15 +296,15 @@ func main() {
 	// Iterate through file path args and for each get then print out lines
 	for i := 0; i < len(files); i++ {
 		// fmt.Println("file", args[i], "i", i)
-		lines, total, err := getLines(files[i], headFlag, startAtOffset, numLines)
+		lines, total, err := input.GetLines(files[i], headFlag, startAtOffset, numLines)
 		if err != nil {
 			// there was a problem such as a ban file path
 			continue
 		}
 
 		if followFlag {
-			ff, err := print.NewFollowedFileForPath(files[i]) // define followed file
-			print.FollowedFiles = append(print.FollowedFiles, ff)
+			ff, err := output.NewFollowedFileForPath(files[i]) // define followed file
+			output.FollowedFiles = append(output.FollowedFiles, ff)
 			if err != nil {
 				panic(err)
 			}
@@ -414,7 +318,7 @@ func main() {
 	}
 
 	// Write to channel for each followed file to release them to follow.
-	for _, ff := range print.FollowedFiles {
+	for _, ff := range output.FollowedFiles {
 		ff.Unlock()
 	}
 

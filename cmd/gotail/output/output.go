@@ -1,4 +1,4 @@
-package print
+package output
 
 import (
 	"fmt"
@@ -63,7 +63,7 @@ func newLinePrinter() *linePrinter {
 			// Print out a header and set new value for the path.
 			outputPrinter.setPath(m.path)
 			fmt.Println()
-			fmt.Println(OutputColour(BrightBlue, fmt.Sprintf("==> %s <==", m.path)))
+			fmt.Println(Colour(BrightBlue, fmt.Sprintf("==> %s <==", m.path)))
 			fmt.Println(m.line)
 		}
 	}()

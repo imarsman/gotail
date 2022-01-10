@@ -1,4 +1,4 @@
-package print
+package output
 
 import (
 	"fmt"
@@ -84,7 +84,7 @@ func BenchmarkPrintLines(b *testing.B) {
 			// Change path on each run
 			r := rand.Intn(100)
 			s := fmt.Sprint(r)
-			printer.Print(s, "hello")
+			printer.print(s, "hello")
 		}
 	})
 
@@ -104,7 +104,7 @@ func BenchmarkPrintLinesWithNoPathChange(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			printer.Print("", "hello")
+			printer.print("", "hello")
 		}
 	})
 

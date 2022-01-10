@@ -1,4 +1,4 @@
-package print
+package output
 
 import (
 	"fmt"
@@ -27,8 +27,8 @@ func SetColour(use bool) {
 	useColour = use
 }
 
-// OutputColour print in outputColour
-func OutputColour(colour int, input ...string) string {
+// Colour print in outputColour
+func Colour(colour int, input ...string) string {
 	str := fmt.Sprint(strings.Join(input, " "))
 	str = strings.Replace(str, "  ", " ", -1)
 
