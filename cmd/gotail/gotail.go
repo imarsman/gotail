@@ -39,7 +39,7 @@ import (
 	or stderr.
 */
 
-var followedFiles = make([]*followedFile, 0, 100) // initialize followed files here
+// var followedFiles = make([]*followedFile, 0, 100) // initialize followed files here
 
 var useColour = true   // use colour - defaults to true
 var usePolling = false // use polling - defaults to inotify
@@ -399,8 +399,8 @@ func main() {
 		}
 
 		if followFlag {
-			ff, err := newFollowedFileForPath(files[i]) // define followed file
-			followedFiles = append(followedFiles, ff)
+			ff, err := print.NewFollowedFileForPath(files[i]) // define followed file
+			print.FollowedFiles = append(print.FollowedFiles, ff)
 			if err != nil {
 				panic(err)
 			}
@@ -414,8 +414,8 @@ func main() {
 	}
 
 	// Write to channel for each followed file to release them to follow.
-	for _, ff := range followedFiles {
-		ff.unlock()
+	for _, ff := range print.FollowedFiles {
+		ff.Unlock()
 	}
 
 	// Wait to exit if files being followed
