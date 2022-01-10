@@ -15,6 +15,14 @@ const (
 	noColour // Can use to default to no colour output
 )
 
+const (
+	BrightGreen = iota
+	BrightYellow
+	BrightBlue
+	BrightRed
+	NoColour // Can use to default to no colour output
+)
+
 var useColour bool
 
 // SetColour set whether or not to use colour output

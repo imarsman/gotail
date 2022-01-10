@@ -11,15 +11,7 @@ import (
 	"strings"
 
 	"github.com/alexflint/go-arg"
-	"github.com/jwalton/gchalk"
-)
-
-const (
-	brightGreen = iota
-	brightYellow
-	brightBlue
-	brightRed
-	noColour // Can use to default to no colour output
+	"github.com/imarsman/gotail/cmd/gotail/print"
 )
 
 /*
@@ -47,8 +39,6 @@ const (
 	or stderr.
 */
 
-// var printerOnce sync.Once                         // used to ensure printer instantiated only once
-// var outputPrinter *linePrinter                    // A struct to handle printing lines
 var followedFiles = make([]*followedFile, 0, 100) // initialize followed files here
 
 var useColour = true   // use colour - defaults to true
@@ -90,37 +80,10 @@ func callSetRLimit(limit uint64) (err error) {
 }
 
 func init() {
-	// // We'll always get the same instance from newPrinter.
-	// outputPrinter = newLinePrinter()
-
 	rlimit = 1000
 
 	// Set files limit
 	setrlimit(rlimit)
-}
-
-// outputColour print in outputColour
-func outputColour(colour int, input ...string) string {
-	str := fmt.Sprint(strings.Join(input, " "))
-	str = strings.Replace(str, "  ", " ", -1)
-
-	if !useColour {
-		return str
-	}
-
-	// Choose colour for output or none
-	switch colour {
-	case brightGreen:
-		return gchalk.BrightGreen(str)
-	case brightYellow:
-		return gchalk.BrightYellow(str)
-	case brightBlue:
-		return gchalk.BrightBlue(str)
-	case brightRed:
-		return gchalk.BrightRed(str)
-	default:
-		return str
-	}
 }
 
 // getLines get linesWanted lines or start gathering lines at linesWanted if
@@ -251,6 +214,7 @@ func main() {
 	if noColourFlag {
 		useColour = false
 	}
+	print.SetColour(useColour)
 
 	// Set follow flag to false if this is a file head call
 	// This is relied upon later
@@ -261,14 +225,14 @@ func main() {
 	justDigits, err := regexp.MatchString(`^[0-9]+$`, numLinesStr)
 	if err != nil {
 		out := os.Stderr
-		fmt.Fprintln(out, outputColour(brightRed, "Got error", err.Error()))
+		fmt.Fprintln(out, print.OutputColour(print.BrightRed, "Got error", err.Error()))
 		os.Exit(1)
 	}
 	if justDigits == false {
 		// Test for + prefix. Complain later if something else is wrong
 		if !strings.HasPrefix(numLinesStr, "+") {
 			out := os.Stderr
-			fmt.Fprintln(out, outputColour(brightRed, "Invalid -n value", numLinesStr, ". Exiting with usage information."))
+			fmt.Fprintln(out, print.OutputColour(print.BrightRed, "Invalid -n value", numLinesStr, ". Exiting with usage information."))
 			os.Exit(1)
 		}
 	}
@@ -283,7 +247,7 @@ func main() {
 		numLines, err = strconv.Atoi(numLinesStr)
 		if err != nil {
 			out := os.Stderr
-			fmt.Fprintln(out, outputColour(brightRed, "Invalid -n value", nStrOrig, ". Exiting with usage information."))
+			fmt.Fprintln(out, print.OutputColour(print.BrightRed, "Invalid -n value", nStrOrig, ". Exiting with usage information."))
 			os.Exit(1)
 		}
 		// Assume head if we got an offset
@@ -295,7 +259,7 @@ func main() {
 		numLines, err = strconv.Atoi(numLinesStr)
 		if err != nil {
 			out := os.Stderr
-			fmt.Fprintln(out, outputColour(brightRed, "invalid -n value", numLinesStr, ". Exiting with usage information."))
+			fmt.Fprintln(out, print.OutputColour(print.BrightRed, "invalid -n value", numLinesStr, ". Exiting with usage information."))
 			os.Exit(1)
 		}
 	}
@@ -321,19 +285,19 @@ func main() {
 
 		// Skips for single file and stdin
 		if prettyFlag == true && multipleFiles {
-			builder.WriteString(outputColour(brightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
+			builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(outputColour(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), linesAvailable)))
+				builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), linesAvailable)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					extent := len(lines) + numLines - 1
-					builder.WriteString(outputColour(brightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), extent)))
+					builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), extent)))
 				}
 			}
 		} else {
@@ -342,32 +306,32 @@ func main() {
 
 			// No lines in file
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(outputColour(brightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), pluralize("line", "lines", len(lines)))))
+				builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), pluralize("line", "lines", len(lines)))))
 			} else {
 				// With multiple files print out filename, etc. otherwise leave empty.
 				if multipleFiles {
 					if startAtOffset {
-						builder.WriteString(outputColour(brightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, linesAvailable, pluralize("line", "lines", linesAvailable))))
+						builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, linesAvailable, pluralize("line", "lines", linesAvailable))))
 					} else {
 						if head {
 							count := numLines
 							if numLines > linesAvailable {
 								count = linesAvailable
 							}
-							builder.WriteString(outputColour(brightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
+							builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
 						} else {
 							count := numLines
 							if numLines > linesAvailable {
 								count = linesAvailable
 							}
-							builder.WriteString(outputColour(brightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
+							builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
 						}
 					}
 				}
 			}
 		}
 		if prettyFlag == true && multipleFiles {
-			builder.WriteString(outputColour(brightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
+			builder.WriteString(print.OutputColour(print.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
 
 		index := 0
@@ -415,7 +379,7 @@ func main() {
 
 	if len(files) == 0 {
 		out := os.Stderr
-		fmt.Fprintln(out, outputColour(brightRed, "No files specified. Exiting with usage information."))
+		fmt.Fprintln(out, print.OutputColour(print.BrightRed, "No files specified. Exiting with usage information."))
 		os.Exit(1)
 	}
 

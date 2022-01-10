@@ -8,6 +8,7 @@ import (
 
 	"github.com/nxadm/tail"
 
+	"github.com/imarsman/gotail/cmd/gotail/print"
 	"github.com/nxadm/tail/ratelimiter"
 )
 
@@ -60,7 +61,7 @@ func newLinePrinter() *linePrinter {
 			// Print out a header and set new value for the path.
 			outputPrinter.setPath(m.path)
 			fmt.Println()
-			fmt.Println(outputColour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
+			fmt.Println(print.OutputColour(print.BrightBlue, fmt.Sprintf("==> %s <==", m.path)))
 			fmt.Println(m.line)
 		}
 	}()
