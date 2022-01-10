@@ -9,13 +9,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/alexflint/go-arg"
+	"github.com/imarsman/gotail/cmd/internal/output"
 	"github.com/jwalton/gchalk"
 	"github.com/nxadm/tail"
-	"github.com/nxadm/tail/ratelimiter"
 )
 
 const (
@@ -51,9 +49,9 @@ const (
 	or stderr.
 */
 
-var printerOnce sync.Once                         // used to ensure printer instantiated only once
-var outputPrinter *linePrinter                    // A struct to handle printing lines
-var followedFiles = make([]*followedFile, 0, 100) // initialize followed files here
+// var printerOnce sync.Once                         // used to ensure printer instantiated only once
+// var outputPrinter *linePrinter                    // A struct to handle printing lines
+var followedFiles = make([]*output.FollowedFile, 0, 100) // initialize followed files here
 
 var useColour = true   // use colour - defaults to true
 var usePolling = false // use polling - defaults to inotify
@@ -94,8 +92,8 @@ func callSetRLimit(limit uint64) (err error) {
 }
 
 func init() {
-	// We'll always get the same instance from newPrinter.
-	outputPrinter = newLinePrinter()
+	// // We'll always get the same instance from newPrinter.
+	// outputPrinter = newLinePrinter()
 
 	rlimit = 1000
 
@@ -104,69 +102,69 @@ func init() {
 }
 
 // a message to be sent when following a file
-type msg struct {
-	path string
-	line string
-}
+// type msg struct {
+// 	path string
+// 	line string
+// }
 
 // A printer is a central place for printing new lines.
-type linePrinter struct {
-	currentPath string
-	messages    chan (msg)
-}
+// type linePrinter struct {
+// 	currentPath string
+// 	messages    chan (msg)
+// }
 
 // newLinePrinter get new printer instance properly instantiated
 // Use package level linePrinter to enforce singleton pattern, as that is the
 // needed pattern at this point.
-func newLinePrinter() *linePrinter {
-	if outputPrinter != nil {
-		return outputPrinter
-	}
-	// Ensure linePrinter is set up only once
-	printerOnce.Do(func() {
-		outputPrinter = new(linePrinter)
-	})
+// func newLinePrinter() *linePrinter {
+// 	if outputPrinter != nil {
+// 		return outputPrinter
+// 	}
+// 	// Ensure linePrinter is set up only once
+// 	printerOnce.Do(func() {
+// 		outputPrinter = new(linePrinter)
+// 	})
 
-	// initialize to empty string
-	outputPrinter.setPath("")
-	outputPrinter.messages = make(chan (msg))
+// 	// initialize to empty string
+// 	outputPrinter.setPath("")
+// 	outputPrinter.messages = make(chan (msg))
 
-	// Print messages in goroutine to avoid exposing messages channel which has
-	// its own locking behaviour. Use of a channel avoids worries about race
-	// condition with incoming path compared to printer path. Previous code
-	// tried atomic values for path and a mutex instead of a channel.
-	go func() {
-		for m := range outputPrinter.messages {
-			if outputPrinter.getPath() == m.path {
-				fmt.Println(m.line)
-				continue
-			}
-			// Print out a header and set new value for the path.
-			outputPrinter.setPath(m.path)
-			fmt.Println()
-			fmt.Println(Colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
-			fmt.Println(m.line)
-		}
-	}()
+// 	// Print messages in goroutine to avoid exposing messages channel which has
+// 	// its own locking behaviour. Use of a channel avoids worries about race
+// 	// condition with incoming path compared to printer path. Previous code
+// 	// tried atomic values for path and a mutex instead of a channel.
+// 	go func() {
+// 		for m := range outputPrinter.messages {
+// 			if outputPrinter.getPath() == m.path {
+// 				fmt.Println(m.line)
+// 				continue
+// 			}
+// 			// Print out a header and set new value for the path.
+// 			outputPrinter.setPath(m.path)
+// 			fmt.Println()
+// 			fmt.Println(Colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
+// 			fmt.Println(m.line)
+// 		}
+// 	}()
 
-	return outputPrinter
-}
+// 	return outputPrinter
+// }
 
-func (p *linePrinter) setPath(path string) {
-	p.currentPath = path
-}
+// func (p *linePrinter) setPath(path string) {
+// 	p.currentPath = path
+// }
 
-func (p *linePrinter) getPath() string {
-	return p.currentPath
-}
+// func (p *linePrinter) getPath() string {
+// 	return p.currentPath
+// }
 
 // print print lines from a followed file.
 // An anonymous function is started in newPrinter to handle additions to the
 // message channel.
-func (p *linePrinter) print(path, line string) {
-	m := msg{path: path, line: line}
-	p.messages <- m
-}
+// func (p *linePrinter) print(path, line string) {
+// 	m := msg{path: path, line: line}
+// 	p.messages <- m
+// }
 
 // followedFile a file being tailed (followed).
 // Uses the tail library which has undoubtedly taken many hours to get working
@@ -183,49 +181,49 @@ func (ff *followedFile) unlock() {
 }
 
 // newFollowedFileForPath create a new file that will start tailing
-func newFollowedFileForPath(path string) (followed *followedFile, err error) {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
+// func newFollowedFileForPath(path string) (followed *followedFile, err error) {
+// 	fi, err := os.Stat(path)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// get the length of the file im bytes for SeekInfo.
-	size := fi.Size()
-	// Set seek location in bytes, with reference to start of file.
-	si := tail.SeekInfo{Offset: size, Whence: 0}
+// 	// get the length of the file im bytes for SeekInfo.
+// 	size := fi.Size()
+// 	// Set seek location in bytes, with reference to start of file.
+// 	si := tail.SeekInfo{Offset: size, Whence: 0}
 
-	// Use leaky bucket algorithm to rate limit output. Implemented by tail
-	// package. The size is the bucket capacity before rate limiting begins.
-	// After that, the leak interval kicks in. If the size is too small a spurt
-	// of new lines will cause the tail package to cease tailing for a period of
-	// time. Initially the size was set to 10 and that was insufficient.
-	lb := ratelimiter.NewLeakyBucket(1000, 1*time.Millisecond)
+// 	// Use leaky bucket algorithm to rate limit output. Implemented by tail
+// 	// package. The size is the bucket capacity before rate limiting begins.
+// 	// After that, the leak interval kicks in. If the size is too small a spurt
+// 	// of new lines will cause the tail package to cease tailing for a period of
+// 	// time. Initially the size was set to 10 and that was insufficient.
+// 	lb := ratelimiter.NewLeakyBucket(1000, 1*time.Millisecond)
 
-	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
-	if err != nil {
-		return
-	}
+// 	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
+// 	if err != nil {
+// 		return
+// 	}
 
-	followed = &followedFile{}
-	followed.tail = tf
-	followed.path = path
+// 	followed = &followedFile{}
+// 	followed.tail = tf
+// 	followed.path = path
 
-	// make channel to use to wait for initial lines to be tailed
-	followed.ch = make(chan struct{})
+// 	// make channel to use to wait for initial lines to be tailed
+// 	followed.ch = make(chan struct{})
 
-	// Using anonymous function to avoid having this called separately
-	go func() {
-		// Wait for initial output to be done in main.
-		<-followed.ch
+// 	// Using anonymous function to avoid having this called separately
+// 	go func() {
+// 		// Wait for initial output to be done in main.
+// 		<-followed.ch
 
-		// Range over lines that come in, actually a channel of line structs
-		for line := range followed.tail.Lines {
-			outputPrinter.print(followed.path, line.Text)
-		}
-	}()
+// 		// Range over lines that come in, actually a channel of line structs
+// 		for line := range followed.tail.Lines {
+// 			outputPrinter.print(followed.path, line.Text)
+// 		}
+// 	}()
 
-	return
-}
+// 	return
+// }
 
 func Colour(colour int, input ...string) string {
 	str := fmt.Sprint(strings.Join(input, " "))
@@ -562,7 +560,7 @@ func main() {
 		}
 
 		if followFlag {
-			ff, err := newFollowedFileForPath(files[i]) // define followed file
+			ff, err := output.NewFollowedFileForPath(files[i]) // define followed file
 			followedFiles = append(followedFiles, ff)
 			if err != nil {
 				panic(err)
@@ -578,7 +576,7 @@ func main() {
 
 	// Write to channel for each followed file to release them to follow.
 	for _, ff := range followedFiles {
-		ff.unlock()
+		ff.Unlock()
 	}
 
 	// Wait to exit if files being followed

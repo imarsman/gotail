@@ -1,6 +1,7 @@
+//go:build windows
 // +build windows
 
-package main
+package gotail
 
 func setrlimit(limit uint64) (err error) {
 	return nil

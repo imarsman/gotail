@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/imarsman/gotail/cmd/gotail"
 	"github.com/nxadm/tail"
 	"github.com/nxadm/tail/ratelimiter"
 )
@@ -19,11 +20,11 @@ const (
 )
 
 var printerOnce sync.Once      // used to ensure printer instantiated only once
-var outputPrinter *linePrinter // A struct to handle printing lines
+var outputPrinter *LinePrinter // A struct to handle printing lines
 
 func init() {
 	// We'll always get the same instance from newPrinter.
-	outputPrinter = newLinePrinter()
+	outputPrinter = NewLinePrinter()
 }
 
 // a message to be sent when following a file
@@ -33,21 +34,21 @@ type msg struct {
 }
 
 // A printer is a central place for printing new lines.
-type linePrinter struct {
+type LinePrinter struct {
 	currentPath string
 	messages    chan (msg)
 }
 
-// newLinePrinter get new printer instance properly instantiated
+// NewLinePrinter get new printer instance properly instantiated
 // Use package level linePrinter to enforce singleton pattern, as that is the
 // needed pattern at this point.
-func newLinePrinter() *linePrinter {
+func NewLinePrinter() *LinePrinter {
 	if outputPrinter != nil {
 		return outputPrinter
 	}
 	// Ensure linePrinter is set up only once
 	printerOnce.Do(func() {
-		outputPrinter = new(linePrinter)
+		outputPrinter = new(LinePrinter)
 	})
 
 	// initialize to empty string
@@ -67,7 +68,7 @@ func newLinePrinter() *linePrinter {
 			// Print out a header and set new value for the path.
 			outputPrinter.setPath(m.path)
 			fmt.Println()
-			fmt.Println(main.Colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
+			fmt.Println(gotail.Colour(brightBlue, fmt.Sprintf("==> %s <==", m.path)))
 			fmt.Println(m.line)
 		}
 	}()
@@ -75,38 +76,38 @@ func newLinePrinter() *linePrinter {
 	return outputPrinter
 }
 
-func (p *linePrinter) setPath(path string) {
+func (p *LinePrinter) setPath(path string) {
 	p.currentPath = path
 }
 
-func (p *linePrinter) getPath() string {
+func (p *LinePrinter) getPath() string {
 	return p.currentPath
 }
 
 // print print lines from a followed file.
 // An anonymous function is started in newPrinter to handle additions to the
 // message channel.
-func (p *linePrinter) print(path, line string) {
+func (p *LinePrinter) print(path, line string) {
 	m := msg{path: path, line: line}
 	p.messages <- m
 }
 
-// followedFile a file being tailed (followed).
+// FollowedFile a file being tailed (followed).
 // Uses the tail library which has undoubtedly taken many hours to get working
 // well.
-type followedFile struct {
+type FollowedFile struct {
 	path string
 	tail *tail.Tail
 	ch   chan struct{}
 }
 
 // unlock channel for file by writing to channel
-func (ff *followedFile) unlock() {
+func (ff *FollowedFile) Unlock() {
 	ff.ch <- *new(struct{})
 }
 
-// newFollowedFileForPath create a new file that will start tailing
-func newFollowedFileForPath(path string) (followed *followedFile, err error) {
+// NewFollowedFileForPath create a new file that will start tailing
+func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -129,7 +130,7 @@ func newFollowedFileForPath(path string) (followed *followedFile, err error) {
 		return
 	}
 
-	followed = &followedFile{}
+	followed = &FollowedFile{}
 	followed.tail = tf
 	followed.path = path
 
