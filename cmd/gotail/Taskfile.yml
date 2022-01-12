@@ -21,7 +21,7 @@ tasks:
     cmds:
       - cmd: rm {{.targetbin}}/{{.buildname}}
         ignore_error: true
-  copy:
+  install:
     desc: copy build file to local bin
     dir: .
     preconditions:
