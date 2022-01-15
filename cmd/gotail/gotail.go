@@ -5,9 +5,11 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alexflint/go-arg"
 	"github.com/imarsman/gotail/cmd/gotail/input"
@@ -87,6 +89,7 @@ var args struct {
 	PrintExtra  bool     `arg:"-p" help:"print extra formatting to output if more than one file is listed"`
 	LineNumbers bool     `arg:"-N" help:"show line numbers"`
 	Head        bool     `arg:"-H" help:"print head of file rather than tail"`
+	Glob        []string `arg:"-G,separate" help:"quoted filesystem glob patterns - will find new files"`
 	Files       []string `arg:"positional" help:"files to tail"`
 }
 
@@ -273,7 +276,36 @@ func main() {
 		os.Exit(0)
 	}
 
-	var files = args.Files
+	expandGlob := func(globs []string, existing []string) (expanded []string, err error) {
+		// make filtere map
+		var found = map[string]bool{}
+		// add in existing items and mark them as present
+		expanded = append(expanded, existing...)
+		for _, v := range expanded {
+			found[v] = true
+		}
+
+		for _, g := range globs {
+			var files []string
+			files, err = filepath.Glob(g)
+			if err != nil {
+				return
+			}
+			for _, f := range files {
+				if !found[f] {
+					expanded = append(expanded, f)
+					found[f] = true
+				}
+			}
+		}
+
+		return
+	}
+
+	files, err := expandGlob(args.Glob, args.Files)
+	if err != nil {
+		panic(err)
+	}
 
 	// For printing out file information when > 1 file being processed
 	multipleFiles = len(files) > 1 // Are multiple files to be printed
@@ -290,33 +322,63 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Iterate through file path args and for each get then print out lines
-	for i := 0; i < len(files); i++ {
-		// fmt.Println("file", args[i], "i", i)
-		lines, total, err := input.GetLines(files[i], head, startAtOffset, numLines)
-		if err != nil {
-			// there was a problem such as a ban file path
-			continue
+	var followedFiles = map[string]bool{}
+
+	runFiles := func() {
+		foundNew := false
+		// files := args.Files
+		// Iterate through file path args and for each get then print out lines
+		for i := 0; i < len(files); i++ {
+			if followedFiles[files[i]] {
+				continue
+			}
+			foundNew = true
+			followedFiles[files[i]] = true
+			lines, total, err := input.GetLines(files[i], head, startAtOffset, numLines)
+			if err != nil {
+				// there was a problem such as a ban file path
+				continue
+			}
+
+			if follow {
+				ff, err := output.NewFollowedFileForPath(files[i]) // define followed file
+				output.FollowedFiles = append(output.FollowedFiles, ff)
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			// This is what the tail command does - leave a space before file name
+			if i > 0 && len(files) > 1 {
+				fmt.Println()
+			}
+			write(files[i], head, lines, total)
 		}
 
-		if follow {
-			ff, err := output.NewFollowedFileForPath(files[i]) // define followed file
-			output.FollowedFiles = append(output.FollowedFiles, ff)
-			if err != nil {
-				panic(err)
+		if foundNew {
+			// Write to channel for each followed file to release them to follow.
+			for _, ff := range output.FollowedFiles {
+				ff.Unlock()
 			}
 		}
-
-		// This is what the tail command does - leave a space before file name
-		if i > 0 && len(files) > 1 {
-			fmt.Println()
-		}
-		write(files[i], head, lines, total)
 	}
 
-	// Write to channel for each followed file to release them to follow.
-	for _, ff := range output.FollowedFiles {
-		ff.Unlock()
+	// Just run the files specified if following isn't being requested
+	if !follow {
+		runFiles()
+	} else {
+		// Follow periodically if follow specified
+		// Code will exit below if follow is set
+		go func() {
+			for {
+				files, err = expandGlob(args.Glob, args.Files)
+				if err != nil {
+					panic(err)
+				}
+				runFiles()
+				time.Sleep(2 * time.Second)
+			}
+		}()
 	}
 
 	// Wait to exit if files being followed
