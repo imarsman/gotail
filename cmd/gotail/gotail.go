@@ -93,6 +93,34 @@ var args struct {
 	Files       []string `arg:"positional" help:"files to tail"`
 }
 
+// expandGlob - take a list of glob patterns and get the complete expanded list,
+// adding this to the incoming list.
+func expandGlob(globs []string, existing []string) (expanded []string, err error) {
+	// make filtere map
+	var found = map[string]bool{}
+	// add in existing items and mark them as present
+	expanded = append(expanded, existing...)
+	for _, v := range expanded {
+		found[v] = true
+	}
+
+	for _, g := range globs {
+		var files []string
+		files, err = filepath.Glob(g)
+		if err != nil {
+			return
+		}
+		for _, f := range files {
+			if !found[f] {
+				expanded = append(expanded, f)
+				found[f] = true
+			}
+		}
+	}
+
+	return
+}
+
 func main() {
 	// Start off by gathering various parameters
 
@@ -274,32 +302,6 @@ func main() {
 		// write to stdout
 		write("", head, lines, total)
 		os.Exit(0)
-	}
-
-	expandGlob := func(globs []string, existing []string) (expanded []string, err error) {
-		// make filtere map
-		var found = map[string]bool{}
-		// add in existing items and mark them as present
-		expanded = append(expanded, existing...)
-		for _, v := range expanded {
-			found[v] = true
-		}
-
-		for _, g := range globs {
-			var files []string
-			files, err = filepath.Glob(g)
-			if err != nil {
-				return
-			}
-			for _, f := range files {
-				if !found[f] {
-					expanded = append(expanded, f)
-					found[f] = true
-				}
-			}
-		}
-
-		return
 	}
 
 	files, err := expandGlob(args.Glob, args.Files)
