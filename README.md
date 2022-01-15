@@ -17,6 +17,18 @@ the `-C` flag. This implementation also allows for a small amount of extra
 formatting to be added using the `-p` (pretty) flag and for the output to
 include line numbers for non-followed output using the `-N` flag.
 
+This implementation of the tail command allows glob patterns to be specified in
+addition to a list of files. Here is an example
+
+```sh
+gotail -f -G "/var/log/*log" -G "/tmp/test.txt" ~/dir/file.txt ~/dir2/*txt
+```
+
+This would take the expanded file list from the final argument (which are not
+re-checked since by the time the code sees the list it will have been expanded
+by the shell) and periodically the globbed patterns will be evaluated to produce
+an expanded list if files that will change as files are added and removed.
+
 Along with the switch to using the go-arg commandline argument handling package
 a general review was carried out that allowed interim logic to be removed from
 code.
