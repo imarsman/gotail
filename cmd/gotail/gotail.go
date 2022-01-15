@@ -41,8 +41,9 @@ import (
 	or stderr.
 */
 
-var useColour = true // use colour - defaults to true
-var follow bool      // follow renamed or replaced files
+var useColour = true                                     // use colour - defaults to true
+var follow bool                                          // follow renamed or replaced files
+var followedFiles = make([]*output.FollowedFile, 0, 100) // initialize followed files here
 
 var rlimit uint64
 
@@ -90,6 +91,7 @@ var args struct {
 	LineNumbers bool     `arg:"-N" help:"show line numbers"`
 	Head        bool     `arg:"-H" help:"print head of file rather than tail"`
 	Glob        []string `arg:"-G,separate" help:"quoted filesystem glob patterns - will find new files"`
+	Interval    int      `arg:"-i" help:"seconds between new file checks"`
 	Files       []string `arg:"positional" help:"files to tail"`
 }
 
@@ -129,6 +131,12 @@ func main() {
 
 	if args.NumLinesStr == "" {
 		args.NumLinesStr = "10"
+	}
+
+	// Set re-check interval and ensure it is not zero
+	interval := args.Interval
+	if interval == 0 {
+		interval = 1
 	}
 
 	var noColourFlag = args.NoColour
@@ -325,30 +333,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	var followedFiles = map[string]bool{}
+	var filesFollowed = map[string]bool{}
 
-	runFiles := func() {
+	runFiles := func(files []string) {
 		foundNew := false
-		// files := args.Files
 		// Iterate through file path args and for each get then print out lines
 		for i := 0; i < len(files); i++ {
-			if followedFiles[files[i]] {
+			if filesFollowed[files[i]] {
 				continue
 			}
 			foundNew = true
-			followedFiles[files[i]] = true
+			filesFollowed[files[i]] = true
 			lines, total, err := input.GetLines(files[i], head, startAtOffset, numLines)
 			if err != nil {
-				// there was a problem such as a ban file path
+				// there was a problem such as a bad file path
 				continue
 			}
 
 			if follow {
 				ff, err := output.NewFollowedFileForPath(files[i]) // define followed file
-				output.FollowedFiles = append(output.FollowedFiles, ff)
+				// unlikely given that non-existent filess would be caught above
 				if err != nil {
-					panic(err)
+					continue
 				}
+				followedFiles = append(followedFiles, ff)
 			}
 
 			// This is what the tail command does - leave a space before file name
@@ -360,7 +368,7 @@ func main() {
 
 		if foundNew {
 			// Write to channel for each followed file to release them to follow.
-			for _, ff := range output.FollowedFiles {
+			for _, ff := range followedFiles {
 				ff.Unlock()
 			}
 		}
@@ -368,18 +376,24 @@ func main() {
 
 	// Just run the files specified if following isn't being requested
 	if !follow {
-		runFiles()
+		runFiles(files)
 	} else {
 		// Follow periodically if follow specified
 		// Code will exit below if follow is set
 		go func() {
-			for {
-				files, err = expandGlob(args.Glob, args.Files)
-				if err != nil {
-					panic(err)
+			// If no glob patterns don't bother
+			if len(args.Glob) > 0 {
+				for {
+					files, err = expandGlob(args.Glob, args.Files)
+					if err != nil {
+						panic(err)
+					}
+					runFiles(files)
+					time.Sleep(time.Duration(interval) * time.Second)
 				}
-				runFiles()
-				time.Sleep(2 * time.Second)
+			} else {
+				runFiles(files)
+				return
 			}
 		}()
 	}
