@@ -96,8 +96,9 @@ var args struct {
 // expandGlob - take a list of glob patterns and get the complete expanded list,
 // adding this to the incoming list.
 func expandGlob(globs []string, existing []string) (expanded []string, err error) {
-	// make filtere map
+	// make filter map
 	var found = map[string]bool{}
+
 	// add in existing items and mark them as present
 	expanded = append(expanded, existing...)
 	for _, v := range expanded {
