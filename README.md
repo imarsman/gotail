@@ -27,7 +27,11 @@ gotail -f -G "/var/log/*log" -G "/tmp/test.txt" ~/dir/file.txt ~/dir2/*txt
 This would take the expanded file list from the final argument (which are not
 re-checked since by the time the code sees the list it will have been expanded
 by the shell) and periodically the globbed patterns will be evaluated to produce
-an expanded list if files that will change as files are added and removed.
+a list of files that will change as files are added and removed.
+
+There is a lot for the code to keep track of, including use of resources if a
+file disappears. It may be that more work will need to be done to catch edge
+cases that could have a negative impact on performance.
 
 Along with the switch to using the go-arg commandline argument handling package
 a general review was carried out that allowed interim logic to be removed from
