@@ -6,6 +6,7 @@ vars:
   GREETING: gotail tasks
   targetbin: ~/bin
   buildname: gotail
+  tmpdir: gotailtmp
 
 tasks:
   default:
@@ -16,6 +17,18 @@ tasks:
     desc: run tests
     cmds:
       - cmd: GOOS={{OS}} GOOARCH={{ARCH}} go test -v ./...
+  run:
+    desc: run gotail
+    cmds:
+      - task: build
+      - mkdir -p ./{{.tmpdir}}
+      - rm -f ./{{.tmpdir}}/*txt
+      - echo "hello" > ./{{.tmpdir}}/1.txt
+      - echo "hello 2" > ./{{.tmpdir}}/2.txt
+      - ./{{.buildname}}{{exeExt}} -f -G "./{{.tmpdir}}/*txt" &
+      - echo "goodbye" > ./{{.tmpdir}}/3.txt
+      - sleep 2
+      - rm -rf ./{{.tmpdir}}
   clearbin:
     desc: clear build in bin dir
     cmds:
