@@ -14,9 +14,6 @@ import (
 var printerOnce sync.Once      // used to ensure printer instantiated only once
 var outputPrinter *linePrinter // A struct to handle printing lines
 
-// FollowedFiles a list of followed files - lasts for run of app
-var FollowedFiles = make([]*FollowedFile, 0, 100) // initialize followed files here
-
 func init() {
 	// We'll always get the same instance from newPrinter.
 	outputPrinter = newLinePrinter()
