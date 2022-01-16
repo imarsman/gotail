@@ -103,28 +103,38 @@ seconds.
 `
 }
 
-// expandGlob - take a list of glob patterns and get the complete expanded list,
-// adding this to the incoming list.
-func expandGlob(globs []string, existing []string) (expanded []string, err error) {
+// expandGlobs - take a list of glob patterns and get the complete expanded list,
+// adding this to the incoming list. The code makes an attempt to normalize paths.
+func expandGlobs(globs []string, existing []string) (expanded []string, err error) {
 	// make filter map
 	var found = map[string]bool{}
 
 	// add in existing items and mark them as present
 	expanded = append(expanded, existing...)
-	for _, v := range expanded {
-		found[v] = true
+	for _, path := range expanded {
+		full, err := filepath.Abs(path)
+		if err != nil {
+			continue
+		}
+		path = filepath.Clean(full)
+		found[path] = true
 	}
 
 	for _, g := range globs {
 		var files []string
 		files, err = filepath.Glob(g)
 		if err != nil {
-			return
+			continue
 		}
-		for _, f := range files {
-			if !found[f] {
-				expanded = append(expanded, f)
-				found[f] = true
+		for _, path := range files {
+			full, err := filepath.Abs(path)
+			if err != nil {
+				continue
+			}
+			path = filepath.Clean(full)
+			if !found[path] {
+				expanded = append(expanded, path)
+				found[path] = true
 			}
 		}
 	}
@@ -133,14 +143,9 @@ func expandGlob(globs []string, existing []string) (expanded []string, err error
 }
 
 func main() {
-	// Start off by gathering various parameters
-
+	// Start off by gathering arguments
 	var args args
 	arg.MustParse(&args)
-
-	if args.NumLinesStr == "" {
-		args.NumLinesStr = "10"
-	}
 
 	// Set re-check interval and ensure it is not zero
 	interval := args.Interval
@@ -149,6 +154,10 @@ func main() {
 	}
 
 	var noColourFlag = args.NoColour
+
+	if args.NumLinesStr == "" {
+		args.NumLinesStr = "10"
+	}
 
 	// Flag for whether to start tail partway into a file
 	var startAtOffset bool
@@ -322,7 +331,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	files, err := expandGlob(args.Glob, args.Files)
+	files, err := expandGlobs(args.Glob, args.Files)
 	if err != nil {
 		panic(err)
 	}
@@ -345,14 +354,23 @@ func main() {
 	var filesFollowed = map[string]bool{}
 
 	runFiles := func(files []string) {
+		var newFollowedFiles = make([]*output.FollowedFile, 0, 100) // initialize followed files here
+
 		foundNew := false
 		// Iterate through file path args and for each get then print out lines
 		for i := 0; i < len(files); i++ {
-			if filesFollowed[files[i]] {
+			path, err := filepath.Abs(files[i])
+			if err != nil {
 				continue
 			}
+
+			if filesFollowed[path] {
+				continue
+			}
+
 			foundNew = true
-			filesFollowed[files[i]] = true
+			filesFollowed[path] = true
+
 			lines, total, err := input.GetLines(files[i], head, startAtOffset, numLines)
 			if err != nil {
 				// there was a problem such as a bad file path
@@ -366,6 +384,7 @@ func main() {
 					continue
 				}
 				followedFiles = append(followedFiles, ff)
+				newFollowedFiles = append(newFollowedFiles, ff)
 			}
 
 			// This is what the tail command does - leave a space before file name
@@ -376,8 +395,11 @@ func main() {
 		}
 
 		if foundNew {
-			// Write to channel for each followed file to release them to follow.
-			for _, ff := range followedFiles {
+			// Write to channel for each followed file to release them to
+			// follow. Only do so if the file is being encountered for the first
+			// time.
+			// Only unlock new followed files.
+			for _, ff := range newFollowedFiles {
 				ff.Unlock()
 			}
 		}
@@ -393,7 +415,7 @@ func main() {
 			// If no glob patterns don't bother
 			if len(args.Glob) > 0 {
 				for {
-					files, err = expandGlob(args.Glob, args.Files)
+					files, err = expandGlobs(args.Glob, args.Files)
 					if err != nil {
 						panic(err)
 					}
