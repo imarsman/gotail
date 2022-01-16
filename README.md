@@ -46,21 +46,28 @@ The arguments are as follows:
 
 ```
 % gotail -h
-Usage: gotail [--nocolour] [--polling] [--followflag] [--numlinesstr NUMLINESSTR] [--printextra] 
-   [--linenumbers] [--head] [FILES [FILES ...]]
+This is an implementation of the tail utility. File patterns can be specified
+with one or more final arguments or as glob patterns with one or more -G parameters.
+If files are followed for new data the glob file list will be checked every interval
+seconds.
+
+Usage: gotail [--nocolour] [--follow] [--numlinesstr NUMLINESSTR] [--printextra] 
+[--linenumbers] [--head] [--glob GLOB] [--interval INTERVAL] [FILES [FILES ...]]
 
 Positional arguments:
   FILES                  files to tail
 
 Options:
   --nocolour, -C         no colour
-  --polling, -P          polling - use file polling instead of inotify
-  --followflag, -f       follow new file lines.
+  --follow, -f           follow new file lines.
   --numlinesstr NUMLINESSTR, -n NUMLINESSTR
                          number of lines - prefix '+' for head to start at line n [default: 10]
   --printextra, -p       print extra formatting to output if more than one file is listed
   --linenumbers, -N      show line numbers
   --head, -H             print head of file rather than tail
+  --glob GLOB, -G GLOB   quoted filesystem glob patterns - will find new files
+  --interval INTERVAL, -i INTERVAL
+                         seconds between new file checks [default: 1]
   --help, -h             display this help and exit
 ```
 
