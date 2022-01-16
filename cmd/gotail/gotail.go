@@ -41,9 +41,11 @@ import (
 	or stderr.
 */
 
-var useColour = true                                     // use colour - defaults to true
-var follow bool                                          // follow renamed or replaced files
-var followedFiles = make([]*output.FollowedFile, 0, 100) // initialize followed files here
+var useColour = true // use colour - defaults to true
+var follow bool      // follow renamed or replaced files
+// initialize followed files here - used to keep track of files being followed
+// so that they can have things done such as unlocking their channels.
+var followedFiles = make([]*output.FollowedFile, 0, 100)
 
 var rlimit uint64
 
@@ -398,7 +400,6 @@ func main() {
 			// Write to channel for each followed file to release them to
 			// follow. Only do so if the file is being encountered for the first
 			// time.
-			// Only unlock new followed files.
 			for _, ff := range newFollowedFiles {
 				ff.Unlock()
 			}
