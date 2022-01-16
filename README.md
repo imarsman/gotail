@@ -30,8 +30,8 @@ by the shell) and periodically the globbed patterns will be evaluated to produce
 a list of files that will change as files are added and removed.
 
 There is a lot for the code to keep track of, including use of resources if a
-file disappears. It may be that more work will need to be done to catch edge
-cases that could have a negative impact on performance.
+file disappears. The tail library being used will begin timing out and
+re-checking for a file that disappears.
 
 Along with the switch to using the go-arg commandline argument handling package
 a general review was carried out that allowed interim logic to be removed from

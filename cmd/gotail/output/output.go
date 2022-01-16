@@ -88,8 +88,8 @@ func (p *linePrinter) print(path, line string) {
 // Uses the tail library which has undoubtedly taken many hours to get working
 // well.
 type FollowedFile struct {
-	path string
-	tail *tail.Tail
+	Path string
+	Tail *tail.Tail
 	ch   chan struct{}
 }
 
@@ -99,7 +99,7 @@ func (ff *FollowedFile) Unlock() {
 }
 
 // NewFollowedFileForPath create a new file that will start tailing
-func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
+func NewFollowedFileForPath(path string) (ff *FollowedFile, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -125,22 +125,22 @@ func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
 		return
 	}
 
-	followed = &FollowedFile{}
-	followed.tail = tf
-	followed.path = path
+	ff = &FollowedFile{}
+	ff.Tail = tf
+	ff.Path = path
 
 	// make channel to use to wait for initial lines to be tailed
-	followed.ch = make(chan struct{})
+	ff.ch = make(chan struct{})
 
 	// Using anonymous function to avoid having this called separately
 	go func() {
 		// Wait for initial output to be done in main.
-		<-followed.ch
-		defer followed.tail.Cleanup()
+		<-ff.ch
+		// defer ff.Tail.Cleanup()
 
 		// Range over lines that come in, actually a channel of line structs
-		for line := range followed.tail.Lines {
-			outputPrinter.print(followed.path, line.Text)
+		for line := range ff.Tail.Lines {
+			outputPrinter.print(ff.Path, line.Text)
 		}
 	}()
 

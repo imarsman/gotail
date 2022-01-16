@@ -355,8 +355,11 @@ func main() {
 
 	var filesFollowed = map[string]bool{}
 
-	runFiles := func(files []string) {
-		var newFollowedFiles = make([]*output.FollowedFile, 0, 100) // initialize followed files here
+	// runFiles run through file list and for any new files and when follow is true, add
+	// the files to the set of followed files.
+	var runFiles = func(files []string) {
+		// make empty set of followed files
+		var newFollowedFiles = make([]*output.FollowedFile, 0, 100)
 
 		foundNew := false
 		// Iterate through file path args and for each get then print out lines
@@ -385,7 +388,9 @@ func main() {
 				if err != nil {
 					continue
 				}
+				// Add to comprehensive list of followed files
 				followedFiles = append(followedFiles, ff)
+				// Add to list of new files found to follow
 				newFollowedFiles = append(newFollowedFiles, ff)
 			}
 
@@ -413,7 +418,7 @@ func main() {
 		// Follow periodically if follow specified
 		// Code will exit below if follow is set
 		go func() {
-			// If no glob patterns don't bother
+			// If there were glob arguments check for new ever few seconds
 			if len(args.Glob) > 0 {
 				for {
 					files, err = expandGlobs(args.Glob, args.Files)
@@ -424,6 +429,7 @@ func main() {
 					time.Sleep(time.Duration(interval) * time.Second)
 				}
 			} else {
+				// If no glob patterns don't bother checking ever interval seconds
 				runFiles(files)
 				return
 			}
