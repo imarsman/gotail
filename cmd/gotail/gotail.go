@@ -83,7 +83,7 @@ func init() {
 }
 
 // args to use with go-args
-var args struct {
+type args struct {
 	NoColour    bool     `arg:"-C" help:"no colour"`
 	Follow      bool     `arg:"-f" help:"follow new file lines."`
 	NumLinesStr string   `arg:"-n" default:"10" help:"number of lines - prefix '+' for head to start at line n"`
@@ -91,8 +91,16 @@ var args struct {
 	LineNumbers bool     `arg:"-N" help:"show line numbers"`
 	Head        bool     `arg:"-H" help:"print head of file rather than tail"`
 	Glob        []string `arg:"-G,separate" help:"quoted filesystem glob patterns - will find new files"`
-	Interval    int      `arg:"-i" help:"seconds between new file checks"`
+	Interval    int      `arg:"-i" help:"seconds between new file checks" default:"1"`
 	Files       []string `arg:"positional" help:"files to tail"`
+}
+
+func (args) Description() string {
+	return `This is an implementation of the tail utility. File patterns can be specified
+with one or more final arguments or as glob patterns with one or more -G parameters.
+If files are followed for new data the glob file list will be checked every interval
+seconds.
+`
 }
 
 // expandGlob - take a list of glob patterns and get the complete expanded list,
@@ -127,6 +135,7 @@ func expandGlob(globs []string, existing []string) (expanded []string, err error
 func main() {
 	// Start off by gathering various parameters
 
+	var args args
 	arg.MustParse(&args)
 
 	if args.NumLinesStr == "" {
