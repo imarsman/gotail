@@ -31,9 +31,10 @@ tasks:
       - ./{{.testname}} -f -G "./{{.tmpdir}}/*txt" &
       - echo "goodbye" > ./{{.tmpdir}}/3.txt
       - sleep 2
-      - killall "{{.testname}}"
       - rm -rf ./{{.tmpdir}}
       - rm ./{{.testname}}
+      - sleep 2
+      - killall "{{.testname}}"
   clearbin:
     desc: clear build in bin dir
     cmds:
