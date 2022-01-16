@@ -117,7 +117,10 @@ func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
 	// time. Initially the size was set to 10 and that was insufficient.
 	lb := ratelimiter.NewLeakyBucket(1000, 1*time.Millisecond)
 
-	tf, err := tail.TailFile(path, tail.Config{Follow: true, RateLimiter: lb, ReOpen: true, Location: &si})
+	// Set up a new tailfile with no logging
+	tf, err := tail.TailFile(path, tail.Config{
+		Follow: true, RateLimiter: lb, ReOpen: true, Location: &si, Logger: tail.DiscardingLogger},
+	)
 	if err != nil {
 		return
 	}
@@ -133,6 +136,7 @@ func NewFollowedFileForPath(path string) (followed *FollowedFile, err error) {
 	go func() {
 		// Wait for initial output to be done in main.
 		<-followed.ch
+		defer followed.tail.Cleanup()
 
 		// Range over lines that come in, actually a channel of line structs
 		for line := range followed.tail.Lines {
