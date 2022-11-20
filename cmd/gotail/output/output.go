@@ -1,11 +1,18 @@
 package output
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/TylerBrock/colorjson"
+	"github.com/fatih/color"
+	"github.com/imarsman/gotail/cmd/internal/args"
+	"github.com/jwalton/gchalk"
 	"github.com/nxadm/tail"
 
 	"github.com/nxadm/tail/ratelimiter"
@@ -17,6 +24,142 @@ var outputPrinter *linePrinter // A struct to handle printing lines
 func init() {
 	// We'll always get the same instance from newPrinter.
 	outputPrinter = newLinePrinter()
+}
+
+var reJSON = `(?P<PREFIX>[^\{\[]+)(?P<JSON>[\{\[].*$)`
+var compRegEx = regexp.MustCompile(reJSON)
+
+type jsonLine struct {
+	prefix string
+	json   string
+}
+
+// Colourize print output with colour highlighting if the -c/--colour flag is used
+// Currently messes up piping
+func Colourize(output string) (colourOutput string) {
+	var obj interface{}
+	json.Unmarshal([]byte(output), &obj)
+	// obj = expandInterfaceToMatch(obj)
+
+	f := colorjson.NewFormatter()
+	f.Indent = 2
+	f.KeyColor = color.New(color.FgHiBlue)
+
+	s, err := f.Marshal(obj)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// fmt.Println(string(s), len(s))
+	return string(s)
+}
+
+func getParams(re *regexp.Regexp, input string) (ok bool, paramsMap map[string]string) {
+	matches := re.FindStringSubmatch(input)
+
+	paramsMap = make(map[string]string)
+	for i, name := range re.SubexpNames() {
+		if i > 0 && i <= len(matches) {
+			paramsMap[name] = matches[i]
+		}
+	}
+	ok = true
+	return
+}
+
+func GetContent(input string) (ok bool, jl jsonLine) {
+	gotParams, matches := getParams(compRegEx, input)
+	if !gotParams {
+		return
+	}
+
+	if len(matches) == 0 {
+		return
+	}
+	isJSON := json.Valid([]byte(matches[`JSON`]))
+	if !isJSON {
+		return
+	}
+	ok = true
+	jl.prefix = strings.TrimSpace(matches[`PREFIX`])
+	jl.json = matches[`JSON`]
+
+	return
+}
+
+// expandInterfaceToMatch take interface and expand to match JSON or YAML interface structures
+func expandInterfaceToMatch(i interface{}) interface{} {
+	switch x := i.(type) {
+	case map[interface{}]interface{}:
+		m2 := map[string]interface{}{}
+		for k, v := range x {
+			m2[k.(string)] = expandInterfaceToMatch(v)
+		}
+		return m2
+	case []interface{}:
+		for i, v := range x {
+			x[i] = expandInterfaceToMatch(v)
+		}
+	}
+	return i
+}
+
+// IndentJSON read json in then write it out indented
+func IndentJSON(input string) (result string, err error) {
+	var obj interface{}
+	err = json.Unmarshal([]byte(input), &obj)
+	if err != nil {
+		fmt.Println(gchalk.Red(err.Error()))
+		os.Exit(1)
+	}
+	obj = expandInterfaceToMatch(obj)
+
+	bytes, err := json.MarshalIndent(&obj, "", "  ")
+	if err != nil {
+		return
+	}
+	result = strings.TrimSpace(string(bytes))
+
+	return
+}
+
+func GetOutput(input string) (output string) {
+	ok, jl := GetContent(input)
+	if ok {
+		var json string
+		var err error
+		if args.Args.JSON {
+			json, err = IndentJSON(jl.json)
+			if err != nil {
+
+			}
+		} else {
+			json = jl.json
+		}
+
+		if args.Args.NoColour {
+			if args.Args.JSON {
+				json, err = IndentJSON(json)
+				if err != nil {
+
+				}
+				output = fmt.Sprintf("%s, %s", jl.prefix, json)
+			} else {
+				output = fmt.Sprintf("%s, %s", jl.prefix, json)
+			}
+		} else {
+			if args.Args.JSON {
+				fmt.Println(".", jl.prefix, ".")
+				output = fmt.Sprintf("%s %s", jl.prefix, Colourize(fmt.Sprintf("%s", json)))
+			} else {
+				output = fmt.Sprintf("%s, %s", jl.prefix, json)
+			}
+		}
+	} else {
+		output = fmt.Sprintf("%s", input)
+	}
+
+	return
 }
 
 // a message to be sent when following a file
@@ -140,7 +283,9 @@ func NewFollowedFileForPath(path string) (ff *FollowedFile, err error) {
 
 		// Range over lines that come in, actually a channel of line structs
 		for line := range ff.Tail.Lines {
-			outputPrinter.print(ff.Path, line.Text)
+			output := GetOutput(line.Text)
+			// fmt.Println("output is", output)
+			outputPrinter.print(ff.Path, output)
 		}
 	}()
 
