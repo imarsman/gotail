@@ -50,7 +50,7 @@ detected.
 
 `gotail` uses completion using the
 [posener](https://github.com/posener/complete/tree/master) library. To activate
-it, once `certcheck` is in your path, type `COMP_INSTALL=1 certcheck`. You will
+it, once `gotail` is in your path, type `COMP_INSTALL=1 gotail`. You will
 be asked to confirm that you wish to have completion support added to your shell
 config. After running this you will need to refresh your terminal session or
 start a new one. If you use `zsh` your `.zshrc` fill will contain `complete -o
