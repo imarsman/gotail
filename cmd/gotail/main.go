@@ -318,20 +318,10 @@ func main() {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			// fmt.Println(scanner.Text())
-			line := output.GetOutput(scanner.Text())
+			var line = output.GetOutput(scanner.Text())
 			io.WriteString(os.Stdout, fmt.Sprintf("%s\n", line))
 		}
 
-		// numLines = 1_000_000
-		// lines, total, err := input.GetLines("", head, startAtOffset, numLines)
-		// if err != nil {
-		// 	fmt.Fprintln(os.Stderr, err.Error())
-		// 	return
-		// }
-
-		// // write to stdout
-		// write("", head, lines, total)
 		os.Exit(0)
 	}
 
