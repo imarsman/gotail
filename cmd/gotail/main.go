@@ -120,31 +120,6 @@ func IndentJSON(input string) (result string, err error) {
 	return
 }
 
-// "github.com/TylerBrock/colorjson"
-
-// PrintColour print output with colour highlighting if the -c/--colour flag is used
-// Currently messes up piping
-// func printColour(output string, format string) {
-// 	if useColour() {
-// 		var obj interface{}
-// 		json.Unmarshal([]byte(output), &obj)
-// 		obj = ExpandInterfaceToMatch(obj)
-
-// 		f := colorjson.NewFormatter()
-// 		f.Indent = 2
-// 		f.KeyColor = color.New(color.FgHiBlue)
-
-// 		s, err := f.Marshal(obj)
-// 		if err != nil {
-// 			fmt.Println(err)
-// 			return
-// 		}
-// 		fmt.Println(string(s))
-// 	} else {
-// 		fmt.Println(output)
-// 	}
-// }
-
 func callSetRLimit(limit uint64) (err error) {
 	return
 }
@@ -459,8 +434,7 @@ func main() {
 							}
 						} else {
 							if args.Args.JSON {
-								colourized := colourize(fmt.Sprintf("%s\n", json))
-								builder.WriteString(fmt.Sprintf("%s: %s\n", jl.prefix, colourized))
+								builder.WriteString(fmt.Sprintf("%s: %s\n", jl.prefix, colourize(fmt.Sprintf("%s\n", json))))
 							} else {
 								builder.WriteString(fmt.Sprintf("%s, %s\n", jl.prefix, json))
 							}
