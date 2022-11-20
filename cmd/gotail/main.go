@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -12,12 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TylerBrock/colorjson"
-	"github.com/fatih/color"
 	"github.com/imarsman/gotail/cmd/gotail/input"
 	"github.com/imarsman/gotail/cmd/gotail/output"
 	"github.com/imarsman/gotail/cmd/internal/args"
-	"github.com/jwalton/gchalk"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/predict"
 )
@@ -84,42 +80,6 @@ var rlimit uint64
 	struct.
 */
 
-// expandInterfaceToMatch take interface and expand to match JSON or YAML interface structures
-func expandInterfaceToMatch(i interface{}) interface{} {
-	switch x := i.(type) {
-	case map[interface{}]interface{}:
-		m2 := map[string]interface{}{}
-		for k, v := range x {
-			m2[k.(string)] = expandInterfaceToMatch(v)
-		}
-		return m2
-	case []interface{}:
-		for i, v := range x {
-			x[i] = expandInterfaceToMatch(v)
-		}
-	}
-	return i
-}
-
-// IndentJSON read json in then write it out indented
-func IndentJSON(input string) (result string, err error) {
-	var obj interface{}
-	err = json.Unmarshal([]byte(input), &obj)
-	if err != nil {
-		fmt.Println(gchalk.Red(err.Error()))
-		os.Exit(1)
-	}
-	obj = expandInterfaceToMatch(obj)
-
-	bytes, err := json.MarshalIndent(&obj, "", "  ")
-	if err != nil {
-		return
-	}
-	result = strings.TrimSpace(string(bytes))
-
-	return
-}
-
 func callSetRLimit(limit uint64) (err error) {
 	return
 }
@@ -167,67 +127,6 @@ func expandGlobs(globs []string, existing []string) (expanded []string, err erro
 		}
 	}
 
-	return
-}
-
-var reJSON = `(?P<PREFIX>[^\{\[]+)(?P<JSON>[\{\[].*$)`
-var compRegEx = regexp.MustCompile(reJSON)
-
-type jsonLine struct {
-	prefix string
-	json   string
-}
-
-func getContent(input string) (ok bool, jl jsonLine) {
-	gotParams, matches := getParams(compRegEx, input)
-	if !gotParams {
-		return
-	}
-
-	if len(matches) == 0 {
-		return
-	}
-	isJSON := json.Valid([]byte(matches[`JSON`]))
-	if !isJSON {
-		return
-	}
-	ok = true
-	jl.prefix = matches[`PREFIX`]
-	jl.json = matches[`JSON`]
-
-	return
-}
-
-// colourize print output with colour highlighting if the -c/--colour flag is used
-// Currently messes up piping
-func colourize(output string) (colourOutput string) {
-	var obj interface{}
-	json.Unmarshal([]byte(output), &obj)
-	// obj = expandInterfaceToMatch(obj)
-
-	f := colorjson.NewFormatter()
-	f.Indent = 2
-	f.KeyColor = color.New(color.FgHiBlue)
-
-	s, err := f.Marshal(obj)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	// fmt.Println(string(s), len(s))
-	return string(s)
-}
-
-func getParams(re *regexp.Regexp, input string) (ok bool, paramsMap map[string]string) {
-	matches := re.FindStringSubmatch(input)
-
-	paramsMap = make(map[string]string)
-	for i, name := range re.SubexpNames() {
-		if i > 0 && i <= len(matches) {
-			paramsMap[name] = matches[i]
-		}
-	}
-	ok = true
 	return
 }
 
@@ -408,43 +307,13 @@ func main() {
 					// Add newline for empty string
 					builder.WriteString("\n")
 				} else {
-					ok, jl := getContent(lines[i])
-					if ok {
-						var json string
-						if args.Args.JSON {
-							json, err = IndentJSON(jl.json)
-							if err != nil {
-
-							}
-						} else {
-							json = jl.json
-						}
-
-						if args.Args.NoColour {
-							if args.Args.JSON {
-								json, err = IndentJSON(json)
-								if err != nil {
-
-								}
-								builder.WriteString(fmt.Sprintf("%s, %s\n", jl.prefix, json))
-							} else {
-								builder.WriteString(fmt.Sprintf("%s, %s\n", jl.prefix, json))
-							}
-						} else {
-							if args.Args.JSON {
-								builder.WriteString(fmt.Sprintf("%s: %s\n", jl.prefix, colourize(fmt.Sprintf("%s\n", json))))
-							} else {
-								builder.WriteString(fmt.Sprintf("%s, %s\n", jl.prefix, json))
-							}
-						}
-					} else {
-						builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
-					}
+					output := output.GetOutput(lines[i])
+					builder.WriteString(fmt.Sprintf("%s\n", output))
 				}
 			}
-		}
 
-		// Write out what was recieved with no added newline
+			// Write out what was recieved with no added newline
+		}
 		io.WriteString(os.Stdout, builder.String())
 	}
 
@@ -467,6 +336,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// fmt.Println(files)
 
 	// For printing out file information when > 1 file being processed
 	multipleFiles = len(files) > 1 // Are multiple files to be printed
