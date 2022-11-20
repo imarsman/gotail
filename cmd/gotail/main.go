@@ -228,7 +228,7 @@ func getContent(input string) (ok bool, jl jsonLine) {
 func colourize(output string) (colourOutput string) {
 	var obj interface{}
 	json.Unmarshal([]byte(output), &obj)
-	obj = expandInterfaceToMatch(obj)
+	// obj = expandInterfaceToMatch(obj)
 
 	f := colorjson.NewFormatter()
 	f.Indent = 2
@@ -435,15 +435,35 @@ func main() {
 				} else {
 					ok, jl := getContent(lines[i])
 					if ok {
-						json, err := IndentJSON(jl.json)
-						if err != nil {
+						var json string
+						fmt.Println("JSON", args.Args.JSON)
+						if args.Args.JSON {
+							json, err = IndentJSON(jl.json)
+							if err != nil {
 
-						}
-						if args.Args.NoColour {
-							builder.WriteString(fmt.Sprintf("%s\n", json))
+							}
 						} else {
-							colourized := colourize(fmt.Sprintf("%s\n", json))
-							builder.WriteString(colourized)
+							json = jl.json
+							fmt.Println("JSON", json)
+						}
+
+						if args.Args.NoColour {
+							if args.Args.JSON {
+								json, err = IndentJSON(json)
+								if err != nil {
+
+								}
+								builder.WriteString(fmt.Sprintf("%s, %s\n", jl.prefix, json))
+							} else {
+								builder.WriteString(fmt.Sprintf("%s, %s\n", jl.prefix, json))
+							}
+						} else {
+							if args.Args.JSON {
+								colourized := colourize(fmt.Sprintf("%s\n", json))
+								builder.WriteString(fmt.Sprintf("%s: %s\n", jl.prefix, colourized))
+							} else {
+								builder.WriteString(fmt.Sprintf("%s, %s\n", jl.prefix, json))
+							}
 						}
 					} else {
 						builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
