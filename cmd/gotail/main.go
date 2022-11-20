@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -315,15 +316,22 @@ func main() {
 	// Use stdin if available
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		numLines = 1_000_000
-		lines, total, err := input.GetLines("", head, startAtOffset, numLines)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			return
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			// fmt.Println(scanner.Text())
+			line := output.GetOutput(scanner.Text())
+			io.WriteString(os.Stdout, fmt.Sprintf("%s\n", line))
 		}
 
-		// write to stdout
-		write("", head, lines, total)
+		// numLines = 1_000_000
+		// lines, total, err := input.GetLines("", head, startAtOffset, numLines)
+		// if err != nil {
+		// 	fmt.Fprintln(os.Stderr, err.Error())
+		// 	return
+		// }
+
+		// // write to stdout
+		// write("", head, lines, total)
 		os.Exit(0)
 	}
 
