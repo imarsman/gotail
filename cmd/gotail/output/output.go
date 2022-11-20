@@ -26,7 +26,7 @@ func init() {
 	outputPrinter = newLinePrinter()
 }
 
-var reJSON = `(?P<PREFIX>[^\{\[]+)(?P<JSON>[\{\[].*$)`
+var reJSON = `(?P<PREFIX>[^\{]+)(?P<JSON>[\{].*$)`
 var compRegEx = regexp.MustCompile(reJSON)
 
 type jsonLine struct {
