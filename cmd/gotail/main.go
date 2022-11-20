@@ -411,7 +411,6 @@ func main() {
 					ok, jl := getContent(lines[i])
 					if ok {
 						var json string
-						fmt.Println("JSON", args.Args.JSON)
 						if args.Args.JSON {
 							json, err = IndentJSON(jl.json)
 							if err != nil {
@@ -419,7 +418,6 @@ func main() {
 							}
 						} else {
 							json = jl.json
-							fmt.Println("JSON", json)
 						}
 
 						if args.Args.NoColour {
