@@ -34,9 +34,9 @@ type jsonLine struct {
 	json   string
 }
 
-// Colourize print output with colour highlighting if the -c/--colour flag is used
+// colourize print output with colour highlighting if the -c/--colour flag is used
 // Currently messes up piping
-func Colourize(output string) (colourOutput string) {
+func colourize(output string) (colourOutput string) {
 	var obj interface{}
 	json.Unmarshal([]byte(output), &obj)
 	// obj = expandInterfaceToMatch(obj)
@@ -50,11 +50,11 @@ func Colourize(output string) (colourOutput string) {
 		fmt.Println(err)
 		return
 	}
-	// fmt.Println(string(s), len(s))
+
 	return string(s)
 }
 
-func getParams(re *regexp.Regexp, input string) (ok bool, paramsMap map[string]string) {
+func getParamMap(re *regexp.Regexp, input string) (ok bool, paramsMap map[string]string) {
 	matches := re.FindStringSubmatch(input)
 
 	paramsMap = make(map[string]string)
@@ -67,8 +67,8 @@ func getParams(re *regexp.Regexp, input string) (ok bool, paramsMap map[string]s
 	return
 }
 
-func GetContent(input string) (ok bool, jl jsonLine) {
-	gotParams, matches := getParams(compRegEx, input)
+func getContent(input string) (ok bool, jl jsonLine) {
+	gotParams, matches := getParamMap(compRegEx, input)
 	if !gotParams {
 		return
 	}
@@ -123,12 +123,13 @@ func IndentJSON(input string) (result string, err error) {
 	return
 }
 
+// GetOutput get output from a log line consisting of the timestamp prefix and potentially JSON payload
 func GetOutput(input string) (output string) {
-	ok, jl := GetContent(input)
+	ok, jl := getContent(input)
 	if ok {
 		var json string
 		var err error
-		if args.Args.JSON {
+		if args.Args.JSON && !args.Args.NoColour {
 			json, err = IndentJSON(jl.json)
 			if err != nil {
 
@@ -149,8 +150,7 @@ func GetOutput(input string) (output string) {
 			}
 		} else {
 			if args.Args.JSON {
-				fmt.Println(".", jl.prefix, ".")
-				output = fmt.Sprintf("%s %s", jl.prefix, Colourize(fmt.Sprintf("%s", json)))
+				output = fmt.Sprintf("%s %s", jl.prefix, colourize(fmt.Sprintf("%s", json)))
 			} else {
 				output = fmt.Sprintf("%s, %s", jl.prefix, json)
 			}
@@ -284,7 +284,6 @@ func NewFollowedFileForPath(path string) (ff *FollowedFile, err error) {
 		// Range over lines that come in, actually a channel of line structs
 		for line := range ff.Tail.Lines {
 			output := GetOutput(line.Text)
-			// fmt.Println("output is", output)
 			outputPrinter.print(ff.Path, output)
 		}
 	}()

@@ -8,7 +8,7 @@ import (
 type args struct {
 	NoColour    bool   `arg:"-C" help:"no colour"`
 	Follow      bool   `arg:"-f" help:"follow new file lines."`
-	NumLinesStr string `arg:"-n" default:"10" help:"number of lines - prefix '+' for head to start at line n"`
+	NumLines    string `arg:"-n" default:"10" help:"number of lines - prefix '+' for head to start at line n"`
 	PrintExtra  bool   `arg:"-p" help:"print extra formatting to output if more than one file is listed"`
 	LineNumbers bool   `arg:"-N" help:"show line numbers"`
 	JSON        bool   `arg:"-j" help:"pretty print JSON"`

@@ -135,7 +135,7 @@ func main() {
 		Flags: map[string]complete.Predictor{
 			"nocolour":           predict.Nothing,
 			"follow":             predict.Nothing,
-			"numlinesstr":        predict.Nothing,
+			"numlines":           predict.Nothing,
 			"printextra-at-days": predict.Nothing,
 			"linenumbers":        predict.Nothing,
 			"json":               predict.Nothing,
@@ -154,8 +154,8 @@ func main() {
 
 	var noColourFlag = args.Args.NoColour
 
-	if args.Args.NumLinesStr == "" {
-		args.Args.NumLinesStr = "10"
+	if args.Args.NumLines == "" {
+		args.Args.NumLines = "10"
 	}
 
 	// Flag for whether to start tail partway into a file
@@ -163,7 +163,7 @@ func main() {
 
 	follow = args.Args.Follow
 
-	var numLinesStr = args.Args.NumLinesStr
+	var numLinesStr = args.Args.NumLines
 	var numLines int
 	var pretty = args.Args.PrintExtra
 	var printLines = args.Args.LineNumbers
@@ -336,8 +336,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	// fmt.Println(files)
 
 	// For printing out file information when > 1 file being processed
 	multipleFiles = len(files) > 1 // Are multiple files to be printed
