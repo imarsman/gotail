@@ -321,6 +321,9 @@ func main() {
 			var line = output.GetOutput(scanner.Text())
 			io.WriteString(os.Stdout, fmt.Sprintf("%s\n", line))
 		}
+		if err := scanner.Err(); err != nil {
+			fmt.Println("Got error", err)
+		}
 
 		os.Exit(0)
 	}
