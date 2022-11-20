@@ -36,6 +36,9 @@ release:
 
     gotail follows files that can grow
 
+    v0.1.1
+    Handling flags and JSON output better
+
     v0.1.0
     Initial support with JSON
 
