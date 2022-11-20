@@ -1,0 +1,90 @@
+# https://taskfile.dev
+
+version: "3"
+
+vars:
+  GREETING: gotail tasks
+  targetbin: ~/bin
+  buildname: gotail
+  tmpdir: gotailtmp
+
+tasks:
+  default:
+    cmds:
+      - echo "{{.GREETING}}"
+    silent: true
+  test:
+    desc: run tests
+    cmds:
+      - cmd: GOOS={{OS}} GOOARCH={{ARCH}} go test -v ./...
+  run:
+    desc: run gotail
+    dir: ./cmd/gotail
+    vars:
+      testname: "{{.buildname}}_test{{exeExt}}"
+    cmds:
+      - task: build
+      - mv ./{{.buildname}}{{exeExt}} ./{{.testname}}
+      - mkdir -p ./{{.tmpdir}}
+      - rm -f ./{{.tmpdir}}/*txt
+      - echo "hello" > ./{{.tmpdir}}/1.txt
+      - echo "hello 2" > ./{{.tmpdir}}/2.txt
+      - ./{{.testname}} -f -G "./{{.tmpdir}}/*txt" &
+      - echo "goodbye" > ./{{.tmpdir}}/3.txt
+      - sleep 2
+      - rm -rf ./{{.tmpdir}}
+      - rm ./{{.testname}}
+      - sleep 2
+      - killall "{{.testname}}"
+  clearbin:
+    desc: clear build in bin dir
+    cmds:
+      - cmd: rm {{.targetbin}}/{{.buildname}}
+        ignore_error: true
+  # install:
+  #   desc: copy build file to local bin
+  #   dir: .
+  #   preconditions:
+  #     - test -d {{.targetbin}}/
+  #   cmds:
+  #     - task: build
+  #     - task: clearbin
+  #     - cp ./{{.buildname}} {{.targetbin}}/{{.buildname}}
+  #     - rm ./{{.buildname}}
+  build:
+    dir: .
+    cmds:
+      - goreleaser release --snapshot --rm-dist
+  install:
+    vars:
+      ARCH_VER:
+        sh: if [[ "{{ARCH}}" = "amd64" ]]; then echo "_v1"; else echo ""; fi
+    dir: ./dist/{{.buildname}}_{{OS}}_{{ARCH}}{{.ARCH_VER}}/
+    desc: "install in local bin directory"
+    cmds:
+      - task: build
+      - cmd: rm {{.targetbin}}/{{.buildname}}
+        ignore_error: true
+      - cp ./{{.buildname}} {{.targetbin}}
+      - cmd: echo "{{.completionmsg}}"
+        silent: true
+  release:
+    dir: .
+    desc: release to github using goreleaser
+    cmds:
+      - goreleaser release --rm-dist
+  macosarm:
+    desc: build for macos ARM
+    cmds:
+      - GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o {{.buildname}}{{exeExt}}
+      - file ./{{.buildname}}
+  macosamd:
+    desc: build for macos AMD
+    cmds:
+      - GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o {{.buildname}}{{exeExt}}
+      - file ./{{.buildname}}
+  windowsamd:
+    desc: build for Windows
+    cmds:
+      - GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o {{.buildname}}{{exeExt}}
+      - file ./{{.buildname}}
