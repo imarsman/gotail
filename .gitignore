@@ -16,3 +16,4 @@
 tail
 cmd/gotail/gotail
 
+dist/*
