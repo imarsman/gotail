@@ -18,11 +18,6 @@ import (
 	"github.com/posener/complete/v2/predict"
 )
 
-var GitCommit string
-var GitLastTag string
-var GitExactTag string
-var Date string
-
 /*
 	This app takes a number of lines argument, a "pretty" argument for more
 	illustrative output, and a list of paths to files, and for each file gathers

@@ -1,8 +1,16 @@
 package args
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/alexflint/go-arg"
 )
+
+var GitCommit string
+var GitLastTag string
+var GitExactTag string
+var Date string
 
 // args to use with go-args
 type args struct {
@@ -25,6 +33,21 @@ with one or more final arguments or as glob patterns with one or more -G paramet
 If files are followed for new data the glob file list will be checked every interval
 seconds.
 `
+}
+
+func leftjust(s string, n int, fill string) string {
+	return s + strings.Repeat(fill, n)
+}
+
+func (args) Version() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintln("gotail"))
+	sb.WriteString(fmt.Sprintln("------"))
+	sb.WriteString(fmt.Sprintf("commit: %8s\n", GitCommit))
+	sb.WriteString(fmt.Sprintf("tag: %10s\n", GitExactTag))
+	sb.WriteString(fmt.Sprintf("date: %23s\n", Date))
+
+	return sb.String()
 }
 
 // Args incoming arguments
