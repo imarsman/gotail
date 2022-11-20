@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -11,10 +12,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alexflint/go-arg"
+	"github.com/TylerBrock/colorjson"
+	"github.com/fatih/color"
 	"github.com/imarsman/gotail/cmd/gotail/input"
 	"github.com/imarsman/gotail/cmd/gotail/output"
+	"github.com/imarsman/gotail/cmd/internal/args"
+	"github.com/jwalton/gchalk"
+	"github.com/posener/complete/v2"
+	"github.com/posener/complete/v2/predict"
 )
+
+var GitCommit string
+var GitLastTag string
+var GitExactTag string
+var Date string
 
 /*
 	This app takes a number of lines argument, a "pretty" argument for more
@@ -73,6 +84,67 @@ var rlimit uint64
 	struct.
 */
 
+// expandInterfaceToMatch take interface and expand to match JSON or YAML interface structures
+func expandInterfaceToMatch(i interface{}) interface{} {
+	switch x := i.(type) {
+	case map[interface{}]interface{}:
+		m2 := map[string]interface{}{}
+		for k, v := range x {
+			m2[k.(string)] = expandInterfaceToMatch(v)
+		}
+		return m2
+	case []interface{}:
+		for i, v := range x {
+			x[i] = expandInterfaceToMatch(v)
+		}
+	}
+	return i
+}
+
+// IndentJSON read json in then write it out indented
+func IndentJSON(input string) (result string, err error) {
+	var obj interface{}
+	err = json.Unmarshal([]byte(input), &obj)
+	if err != nil {
+		fmt.Println(gchalk.Red(err.Error()))
+		os.Exit(1)
+	}
+	obj = expandInterfaceToMatch(obj)
+
+	bytes, err := json.MarshalIndent(&obj, "", "  ")
+	if err != nil {
+		return
+	}
+	result = strings.TrimSpace(string(bytes))
+
+	return
+}
+
+// "github.com/TylerBrock/colorjson"
+
+// PrintColour print output with colour highlighting if the -c/--colour flag is used
+// Currently messes up piping
+// func printColour(output string, format string) {
+// 	if useColour() {
+// 		var obj interface{}
+// 		json.Unmarshal([]byte(output), &obj)
+// 		obj = ExpandInterfaceToMatch(obj)
+
+// 		f := colorjson.NewFormatter()
+// 		f.Indent = 2
+// 		f.KeyColor = color.New(color.FgHiBlue)
+
+// 		s, err := f.Marshal(obj)
+// 		if err != nil {
+// 			fmt.Println(err)
+// 			return
+// 		}
+// 		fmt.Println(string(s))
+// 	} else {
+// 		fmt.Println(output)
+// 	}
+// }
+
 func callSetRLimit(limit uint64) (err error) {
 	return
 }
@@ -82,27 +154,6 @@ func init() {
 
 	// Set files limit
 	setrlimit(rlimit)
-}
-
-// args to use with go-args
-type args struct {
-	NoColour    bool     `arg:"-C" help:"no colour"`
-	Follow      bool     `arg:"-f" help:"follow new file lines."`
-	NumLinesStr string   `arg:"-n" default:"10" help:"number of lines - prefix '+' for head to start at line n"`
-	PrintExtra  bool     `arg:"-p" help:"print extra formatting to output if more than one file is listed"`
-	LineNumbers bool     `arg:"-N" help:"show line numbers"`
-	Head        bool     `arg:"-H" help:"print head of file rather than tail"`
-	Glob        []string `arg:"-G,separate" help:"quoted filesystem glob patterns - will find new files"`
-	Interval    int      `arg:"-i" help:"seconds between new file checks" default:"1"`
-	Files       []string `arg:"positional" help:"files to tail"`
-}
-
-func (args) Description() string {
-	return `This is an implementation of the tail utility. File patterns can be specified
-with one or more final arguments or as glob patterns with one or more -G parameters.
-If files are followed for new data the glob file list will be checked every interval
-seconds.
-`
 }
 
 // expandGlobs - take a list of glob patterns and get the complete expanded list,
@@ -144,33 +195,105 @@ func expandGlobs(globs []string, existing []string) (expanded []string, err erro
 	return
 }
 
+var reJSON = `(?P<PREFIX>[^\{\[]+)(?P<JSON>[\{\[].*$)`
+var compRegEx = regexp.MustCompile(reJSON)
+
+type jsonLine struct {
+	prefix string
+	json   string
+}
+
+func getContent(input string) (ok bool, jl jsonLine) {
+	gotParams, matches := getParams(compRegEx, input)
+	if !gotParams {
+		return
+	}
+
+	if len(matches) == 0 {
+		return
+	}
+	isJSON := json.Valid([]byte(matches[`JSON`]))
+	if !isJSON {
+		return
+	}
+	ok = true
+	jl.prefix = matches[`PREFIX`]
+	jl.json = matches[`JSON`]
+
+	return
+}
+
+// colourize print output with colour highlighting if the -c/--colour flag is used
+// Currently messes up piping
+func colourize(output string) (colourOutput string) {
+	var obj interface{}
+	json.Unmarshal([]byte(output), &obj)
+	obj = expandInterfaceToMatch(obj)
+
+	f := colorjson.NewFormatter()
+	f.Indent = 2
+	f.KeyColor = color.New(color.FgHiBlue)
+
+	s, err := f.Marshal(obj)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// fmt.Println(string(s), len(s))
+	return string(s)
+}
+
+func getParams(re *regexp.Regexp, input string) (ok bool, paramsMap map[string]string) {
+	matches := re.FindStringSubmatch(input)
+
+	paramsMap = make(map[string]string)
+	for i, name := range re.SubexpNames() {
+		if i > 0 && i <= len(matches) {
+			paramsMap[name] = matches[i]
+		}
+	}
+	ok = true
+	return
+}
+
 func main() {
-	// Start off by gathering arguments
-	var args args
-	arg.MustParse(&args)
+	cmd := &complete.Command{
+		Flags: map[string]complete.Predictor{
+			"nocolour":           predict.Nothing,
+			"follow":             predict.Nothing,
+			"numlinesstr":        predict.Nothing,
+			"printextra-at-days": predict.Nothing,
+			"linenumbers":        predict.Nothing,
+			"json":               predict.Nothing,
+			"head":               predict.Nothing,
+			"glob":               predict.Nothing,
+			"interval":           predict.Nothing,
+		},
+	}
+	cmd.Complete("gotail")
 
 	// Set re-check interval and ensure it is not zero
-	interval := args.Interval
+	interval := args.Args.Interval
 	if interval == 0 {
 		interval = 1
 	}
 
-	var noColourFlag = args.NoColour
+	var noColourFlag = args.Args.NoColour
 
-	if args.NumLinesStr == "" {
-		args.NumLinesStr = "10"
+	if args.Args.NumLinesStr == "" {
+		args.Args.NumLinesStr = "10"
 	}
 
 	// Flag for whether to start tail partway into a file
 	var startAtOffset bool
 
-	follow = args.Follow
+	follow = args.Args.Follow
 
-	var numLinesStr = args.NumLinesStr
+	var numLinesStr = args.Args.NumLinesStr
 	var numLines int
-	var pretty = args.PrintExtra
-	var printLines = args.LineNumbers
-	var head = args.Head
+	var pretty = args.Args.PrintExtra
+	var printLines = args.Args.LineNumbers
+	var head = args.Args.Head
 
 	if noColourFlag {
 		useColour = false
@@ -310,7 +433,21 @@ func main() {
 					// Add newline for empty string
 					builder.WriteString("\n")
 				} else {
-					builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
+					ok, jl := getContent(lines[i])
+					if ok {
+						json, err := IndentJSON(jl.json)
+						if err != nil {
+
+						}
+						if args.Args.NoColour {
+							builder.WriteString(fmt.Sprintf("%s\n", json))
+						} else {
+							colourized := colourize(fmt.Sprintf("%s\n", json))
+							builder.WriteString(colourized)
+						}
+					} else {
+						builder.WriteString(fmt.Sprintf("%s\n", lines[i]))
+					}
 				}
 			}
 		}
@@ -322,6 +459,7 @@ func main() {
 	// Use stdin if available
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		numLines = 1_000_000
 		lines, total, err := input.GetLines("", head, startAtOffset, numLines)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
@@ -333,7 +471,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	files, err := expandGlobs(args.Glob, args.Files)
+	files, err := expandGlobs(args.Args.Glob, args.Args.Files)
 	if err != nil {
 		panic(err)
 	}
@@ -419,9 +557,9 @@ func main() {
 		// Code will exit below if follow is set
 		go func() {
 			// If there were glob arguments check for new ever few seconds
-			if len(args.Glob) > 0 {
+			if len(args.Args.Glob) > 0 {
 				for {
-					files, err = expandGlobs(args.Glob, args.Files)
+					files, err = expandGlobs(args.Args.Glob, args.Args.Files)
 					if err != nil {
 						panic(err)
 					}
