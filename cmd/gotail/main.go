@@ -133,15 +133,15 @@ func expandGlobs(globs []string, existing []string) (expanded []string, err erro
 func main() {
 	cmd := &complete.Command{
 		Flags: map[string]complete.Predictor{
-			"nocolour":           predict.Nothing,
-			"follow":             predict.Nothing,
-			"numlines":           predict.Nothing,
-			"printextra-at-days": predict.Nothing,
-			"linenumbers":        predict.Nothing,
-			"json":               predict.Nothing,
-			"head":               predict.Nothing,
-			"glob":               predict.Nothing,
-			"interval":           predict.Nothing,
+			"nocolour":    predict.Nothing,
+			"follow":      predict.Nothing,
+			"numlines":    predict.Nothing,
+			"printextra":  predict.Nothing,
+			"linenumbers": predict.Nothing,
+			"json":        predict.Nothing,
+			"head":        predict.Nothing,
+			"glob":        predict.Nothing,
+			"interval":    predict.Nothing,
 		},
 	}
 	cmd.Complete("gotail")
