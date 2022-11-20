@@ -15,7 +15,7 @@ type args struct {
 	// AllLines    bool     `arg:"-a" help:"show all lines"`
 	Head     bool     `arg:"-H" help:"print head of file rather than tail"`
 	Glob     []string `arg:"-G,separate" help:"quoted filesystem glob patterns - will find new files"`
-	Interval int      `arg:"-i" help:"seconds between new file checks" default:"1"`
+	Interval uint     `arg:"-i" help:"seconds between new file checks" default:"1"`
 	Files    []string `arg:"positional" help:"files to tail"`
 }
 
