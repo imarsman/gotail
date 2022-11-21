@@ -135,6 +135,7 @@ func main() {
 			"printextra":  predict.Nothing,
 			"linenumbers": predict.Nothing,
 			"json":        predict.Nothing,
+			"json-only":   predict.Nothing,
 			"head":        predict.Nothing,
 			"glob":        predict.Nothing,
 			"interval":    predict.Nothing,
@@ -237,7 +238,7 @@ func main() {
 			strategyStr = "head"
 		}
 
-		// Skips for single file and stdin
+		// write a line of dashes
 		if pretty == true && multipleFiles {
 			builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
@@ -284,6 +285,7 @@ func main() {
 				}
 			}
 		}
+		// Add a line of dashes
 		if pretty == true && multipleFiles {
 			builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("%s\n", strings.Repeat("-", 80))))
 		}
@@ -303,13 +305,15 @@ func main() {
 					// Add newline for empty string
 					builder.WriteString("\n")
 				} else {
-					output := output.GetOutput(lines[i])
+					output, err := output.GetOutput(lines[i])
+					if err != nil {
+						continue
+					}
 					builder.WriteString(fmt.Sprintf("%s\n", output))
 				}
 			}
-
-			// Write out what was recieved with no added newline
 		}
+		// Write out what was recieved with no added newline
 		io.WriteString(os.Stdout, builder.String())
 	}
 
@@ -318,7 +322,10 @@ func main() {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			var line = output.GetOutput(scanner.Text())
+			var line, err = output.GetOutput(scanner.Text())
+			if err != nil {
+				continue
+			}
 			io.WriteString(os.Stdout, fmt.Sprintf("%s\n", line))
 		}
 		if err := scanner.Err(); err != nil {
@@ -328,6 +335,7 @@ func main() {
 		os.Exit(0)
 	}
 
+	// look at files to tail
 	files, err := expandGlobs(args.Args.Glob, args.Args.Files)
 	if err != nil {
 		panic(err)
@@ -338,7 +346,7 @@ func main() {
 
 	if len(files) == 0 {
 		out := os.Stderr
-		fmt.Fprintln(out, output.Colour(output.BrightRed, "No files specified. Exiting with usage information."))
+		fmt.Fprintln(out, output.Colour(output.BrightRed, "No files specified. Exiting."))
 		os.Exit(1)
 	}
 
@@ -348,10 +356,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// make a map of files followed
 	var filesFollowed = map[string]bool{}
 
-	// runFiles run through file list and for any new files and when follow is true, add
-	// the files to the set of followed files.
+	// runFiles run through file list and for any new files and when follow is
+	// true, add the files to the set of followed files.
 	var runFiles = func(files []string) {
 		// make empty set of followed files
 		var newFollowedFiles = make([]*output.FollowedFile, 0, 100)
@@ -378,7 +387,8 @@ func main() {
 			}
 
 			if follow {
-				ff, err := output.NewFollowedFileForPath(files[i]) // define followed file
+				// define followed file
+				ff, err := output.NewFollowedFileForPath(files[i])
 				// unlikely given that non-existent filess would be caught above
 				if err != nil {
 					continue

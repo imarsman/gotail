@@ -7,9 +7,16 @@ import (
 	"github.com/alexflint/go-arg"
 )
 
+// GitCommit for use when compiling
 var GitCommit string
+
+// GitLastTag for use when compiling
 var GitLastTag string
+
+// GitExactTag for use when compiling
 var GitExactTag string
+
+// Date for use when compiling
 var Date string
 
 // args to use with go-args
@@ -20,6 +27,7 @@ type args struct {
 	PrintExtra  bool   `arg:"-p" help:"print extra formatting to output if more than one file is listed"`
 	LineNumbers bool   `arg:"-N" help:"show line numbers"`
 	JSON        bool   `arg:"-j" help:"pretty print JSON"`
+	JSONOnly    bool   `arg:"-J,--json-only" help:"ignore non-JSON"`
 	// AllLines    bool     `arg:"-a" help:"show all lines"`
 	Head     bool     `arg:"-H" help:"print head of file rather than tail"`
 	Glob     []string `arg:"-G,separate" help:"quoted filesystem glob patterns - will find new files"`

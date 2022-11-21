@@ -2,6 +2,7 @@ package output
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -124,7 +125,7 @@ func IndentJSON(input string) (result string, err error) {
 }
 
 // GetOutput get output from a log line consisting of the timestamp prefix and potentially JSON payload
-func GetOutput(input string) (output string) {
+func GetOutput(input string) (output string, err error) {
 	ok, jl := getContent(input)
 	if ok {
 		var json string
@@ -156,6 +157,10 @@ func GetOutput(input string) (output string) {
 			}
 		}
 	} else {
+		if args.Args.JSONOnly {
+			err = errors.New("line is not JSON and JSON only flag used")
+			return
+		}
 		output = fmt.Sprintf("%s", input)
 	}
 
@@ -283,7 +288,10 @@ func NewFollowedFileForPath(path string) (ff *FollowedFile, err error) {
 
 		// Range over lines that come in, actually a channel of line structs
 		for line := range ff.Tail.Lines {
-			output := GetOutput(line.Text)
+			output, err := GetOutput(line.Text)
+			if err != nil {
+				continue
+			}
 			outputPrinter.print(ff.Path, output)
 		}
 	}()
