@@ -12,6 +12,7 @@ import (
 
 	"github.com/TylerBrock/colorjson"
 	"github.com/fatih/color"
+	"github.com/imarsman/gotail/cmd/gotail/util"
 	"github.com/imarsman/gotail/cmd/internal/args"
 	"github.com/jwalton/gchalk"
 	"github.com/nxadm/tail"
@@ -21,22 +22,10 @@ import (
 
 var printerOnce sync.Once      // used to ensure printer instantiated only once
 var outputPrinter *linePrinter // A struct to handle printing lines
-var lineMatchRegexp *regexp.Regexp
 
 func init() {
 	// We'll always get the same instance from newPrinter.
 	outputPrinter = newLinePrinter()
-
-	if args.Args.Match != "" {
-		lineMatchRegexp = regexp.MustCompile(args.Args.Match)
-	} else {
-		lineMatchRegexp = regexp.MustCompile(`.*`)
-	}
-}
-
-// CheckMatch check if line is a match to regexp
-func CheckMatch(input string) bool {
-	return lineMatchRegexp.Match([]byte(input))
 }
 
 var reJSON = `(?P<PREFIX>[^\{]+)(?P<JSON>[\{].*$)`
@@ -300,7 +289,7 @@ func NewFollowedFileForPath(path string) (ff *FollowedFile, err error) {
 
 		// Range over lines that come in, actually a channel of line structs
 		for line := range ff.Tail.Lines {
-			if !CheckMatch(line.Text) {
+			if !util.CheckMatch(line.Text) {
 				continue
 			}
 			output, err := GetOutput(line.Text)
