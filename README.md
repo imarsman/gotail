@@ -61,15 +61,21 @@ nospace -C /path/to/gotail gotail`.
 The arguments are as follows:
 
 ```
-$ gotail --help
+$ gotail -h
 This is an implementation of the tail utility. File patterns can be specified
 with one or more final arguments or as glob patterns with one or more -G parameters.
 If files are followed for new data the glob file list will be checked every interval
 seconds.
 
+gotail
+------
+commit:  407f215
+tag:     v0.1.5
+date:    2022-11-21T01:07:27Z
+
 Usage: gotail [--nocolour] [--follow] [--numlines NUMLINES] [--printextra] 
-              [--linenumbers] [--json] [--head] [--glob GLOB] [--interval INTERVAL] 
-              [FILES [FILES ...]]
+      [--linenumbers] [--json] [--json-only] [--match MATCH] [--head] [--glob GLOB] 
+      [--interval INTERVAL] [FILES [FILES ...]]
 
 Positional arguments:
   FILES                  files to tail
@@ -82,11 +88,15 @@ Options:
   --printextra, -p       print extra formatting to output if more than one file is listed
   --linenumbers, -N      show line numbers
   --json, -j             pretty print JSON
+  --json-only, -J        ignore non-JSON
+  --match MATCH, -m MATCH
+                         match lines by regex
   --head, -H             print head of file rather than tail
   --glob GLOB, -G GLOB   quoted filesystem glob patterns - will find new files
   --interval INTERVAL, -i INTERVAL
                          seconds between new file checks [default: 1]
   --help, -h             display this help and exit
+  --version              display version and exit
   ```
 
 One possible extension would be to periodically look for new files and add them
