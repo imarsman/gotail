@@ -28,6 +28,7 @@ type args struct {
 	LineNumbers bool   `arg:"-N" help:"show line numbers"`
 	JSON        bool   `arg:"-j" help:"pretty print JSON"`
 	JSONOnly    bool   `arg:"-J,--json-only" help:"ignore non-JSON"`
+	Match       string `arg:"-m,--match" help:"match lines by regex"`
 	// AllLines    bool     `arg:"-a" help:"show all lines"`
 	Head     bool     `arg:"-H" help:"print head of file rather than tail"`
 	Glob     []string `arg:"-G,separate" help:"quoted filesystem glob patterns - will find new files"`

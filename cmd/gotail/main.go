@@ -136,6 +136,7 @@ func main() {
 			"linenumbers": predict.Nothing,
 			"json":        predict.Nothing,
 			"json-only":   predict.Nothing,
+			"match":       predict.Nothing,
 			"head":        predict.Nothing,
 			"glob":        predict.Nothing,
 			"interval":    predict.Nothing,
@@ -305,6 +306,9 @@ func main() {
 					// Add newline for empty string
 					builder.WriteString("\n")
 				} else {
+					if !output.CheckMatch(lines[i]) {
+						continue
+					}
 					output, err := output.GetOutput(lines[i])
 					if err != nil {
 						continue
@@ -322,6 +326,9 @@ func main() {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
+			if !output.CheckMatch(scanner.Text()) {
+				continue
+			}
 			var line, err = output.GetOutput(scanner.Text())
 			if err != nil {
 				continue
