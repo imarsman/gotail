@@ -127,6 +127,11 @@ func IndentJSON(input string) (result string, err error) {
 
 // GetOutput get output from a log line consisting of the timestamp prefix and potentially JSON payload
 func GetOutput(input string) (output string, err error) {
+	if !util.CheckMatch(input) {
+		err = errors.New("no match found")
+
+		return
+	}
 	ok, jl := getContent(input)
 	if ok {
 		var json string
@@ -285,13 +290,9 @@ func NewFollowedFileForPath(path string) (ff *FollowedFile, err error) {
 	go func() {
 		// Wait for initial output to be done in main.
 		<-ff.ch
-		// defer ff.Tail.Cleanup()
 
 		// Range over lines that come in, actually a channel of line structs
 		for line := range ff.Tail.Lines {
-			if !util.CheckMatch(line.Text) {
-				continue
-			}
 			output, err := GetOutput(line.Text)
 			if err != nil {
 				continue

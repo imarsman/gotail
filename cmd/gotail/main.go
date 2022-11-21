@@ -14,7 +14,6 @@ import (
 
 	"github.com/imarsman/gotail/cmd/gotail/input"
 	"github.com/imarsman/gotail/cmd/gotail/output"
-	"github.com/imarsman/gotail/cmd/gotail/util"
 	"github.com/imarsman/gotail/cmd/internal/args"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/predict"
@@ -307,9 +306,6 @@ func main() {
 					// Add newline for empty string
 					builder.WriteString("\n")
 				} else {
-					if !util.CheckMatch(lines[i]) {
-						continue
-					}
 					output, err := output.GetOutput(lines[i])
 					if err != nil {
 						continue
@@ -327,9 +323,6 @@ func main() {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			if !util.CheckMatch(scanner.Text()) {
-				continue
-			}
 			var line, err = output.GetOutput(scanner.Text())
 			if err != nil {
 				continue
