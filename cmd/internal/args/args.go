@@ -27,7 +27,7 @@ type args struct {
 	PrintExtra  bool   `arg:"-p" help:"print extra formatting to output if more than one file is listed"`
 	LineNumbers bool   `arg:"-N" help:"show line numbers"`
 	JSON        bool   `arg:"-j" help:"pretty print JSON"`
-	JSONOnly    bool   `arg:"-J,--json-only" help:"ignore non-JSON"`
+	JSONOnly    bool   `arg:"-J,--json-only" help:"ignore non-JSON and process JSON"`
 	Match       string `arg:"-m,--match" help:"match lines by regex"`
 	// AllLines    bool     `arg:"-a" help:"show all lines"`
 	Head     bool     `arg:"-H" help:"print head of file rather than tail"`
@@ -65,4 +65,7 @@ var Args args
 func init() {
 	// Start off by gathering arguments
 	arg.MustParse(&Args)
+	if Args.JSONOnly {
+		Args.JSON = true
+	}
 }
