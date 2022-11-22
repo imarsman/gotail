@@ -46,6 +46,15 @@ placed in output formatted and colourized. Currently only a single line is
 examined. Log output with JSON that spans more than one line will not be
 detected.
 
+```
+$ echo 'prefix {"timestamp":"2016-11-13 23:06:17.727","level":"INFO","thread":"qtp745835029-19"}'|gotail -json
+prefix {
+  "level": "INFO",
+  "thread": "qtp745835029-19",
+  "timestamp": "2016-11-13 23:06:17.727"
+}
+```
+
 ## Completion
 
 `gotail` uses completion using the
