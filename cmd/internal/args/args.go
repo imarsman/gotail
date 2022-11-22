@@ -50,8 +50,6 @@ func leftjust(s string, n int, fill string) string {
 
 func (args) Version() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintln("gotail"))
-	sb.WriteString(fmt.Sprintln("------"))
 	sb.WriteString(fmt.Sprintf("commit: %8s\n", GitCommit))
 	sb.WriteString(fmt.Sprintf("tag: %10s\n", GitExactTag))
 	sb.WriteString(fmt.Sprintf("date: %23s\n", Date))
