@@ -14,6 +14,7 @@ import (
 
 	"github.com/imarsman/gotail/cmd/gotail/input"
 	"github.com/imarsman/gotail/cmd/gotail/output"
+	"github.com/imarsman/gotail/cmd/gotail/util"
 	"github.com/imarsman/gotail/cmd/internal/args"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/predict"
@@ -61,7 +62,7 @@ var rlimit uint64
 	either limit value.
 
 	Note:
-	When testing the hard limit on MacOS was 9223372036854775807
+	When testing the hard limit on MacOS was 9_223_372_036_854_775_807
 
 	Output:
 	There are two modes of output in this app. The first mode is a file-by file
@@ -222,13 +223,6 @@ func main() {
 
 	var multipleFiles bool
 
-	var pluralize = func(singular, plural string, number int) string {
-		if number == 1 {
-			return singular
-		}
-		return plural
-	}
-
 	// Write lines for a single file to avoid growing large output then dumping
 	// all at once. The lines to print are passed in.
 	var write = func(path string, head bool, lines []string, linesAvailable int) {
@@ -247,40 +241,37 @@ func main() {
 		// head is also true
 		if startAtOffset {
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), linesAvailable)))
+				builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, util.Pluralize("line", "lines", linesAvailable), linesAvailable)))
 			} else {
 				// The tail utility prints out filenames if there is more than one
 				// file. Do so here as well.
 				if multipleFiles {
 					extent := len(lines) + numLines - 1
-					builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, pluralize("line", "lines", linesAvailable), extent)))
+					builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %s %d <==\n", path, numLines, util.Pluralize("line", "lines", linesAvailable), extent)))
 				}
 			}
 		} else {
-			// The tail utility prints out filenames if there is more than one
-			// file. Do so here as well.
-
 			// No lines in file
 			if len(lines) == 0 && multipleFiles {
-				builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), pluralize("line", "lines", len(lines)))))
+				builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - %s of %d %s <==\n", path, strategyStr, len(lines), util.Pluralize("line", "lines", len(lines)))))
 			} else {
 				// With multiple files print out filename, etc. otherwise leave empty.
 				if multipleFiles {
 					if startAtOffset {
-						builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, linesAvailable, pluralize("line", "lines", linesAvailable))))
+						builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - starting at %d of %d %s <==\n", path, numLines, linesAvailable, util.Pluralize("line", "lines", linesAvailable))))
 					} else {
 						if head {
 							count := numLines
 							if numLines > linesAvailable {
 								count = linesAvailable
 							}
-							builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
+							builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - head %d of %d %s <==\n", path, count, linesAvailable, util.Pluralize("line", "lines", linesAvailable))))
 						} else {
 							count := numLines
 							if numLines > linesAvailable {
 								count = linesAvailable
 							}
-							builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, linesAvailable, pluralize("line", "lines", linesAvailable))))
+							builder.WriteString(output.Colour(output.BrightBlue, fmt.Sprintf("==> %s - tail %d of %d %s <==\n", path, count, linesAvailable, util.Pluralize("line", "lines", linesAvailable))))
 						}
 					}
 				}

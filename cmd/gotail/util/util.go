@@ -23,3 +23,11 @@ func CheckMatch(input string) bool {
 	}
 	return lineMatchRegexp.Match([]byte(input))
 }
+
+// Pluralize produce sigular or plural output depending on number value
+var Pluralize = func(singular, plural string, number int) string {
+	if number == 1 {
+		return singular
+	}
+	return plural
+}
