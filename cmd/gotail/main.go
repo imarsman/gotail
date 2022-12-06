@@ -30,6 +30,8 @@ import (
 
 	This app can also follow files as they are added to.
 
+	Lines containing JSON can be expanded and printed in colour.
+
 	The native Unix implementation of tail is much smaller and uses less
 	resources. This is mostly a test but it seems to work well so far.
 
@@ -90,22 +92,13 @@ func init() {
 
 // expandGlobs - take a list of glob patterns and get the complete expanded list,
 // adding this to the incoming list. The code makes an attempt to normalize paths.
-func expandGlobs(globs []string, existing []string) (expanded []string, err error) {
+func expandGlobs(existing []string) (expanded []string, err error) {
 	// make filter map
 	var found = map[string]bool{}
 
 	// add in existing items and mark them as present
-	expanded = append(expanded, existing...)
-	for _, path := range expanded {
-		full, err := filepath.Abs(path)
-		if err != nil {
-			continue
-		}
-		path = filepath.Clean(full)
-		found[path] = true
-	}
-
-	for _, g := range globs {
+	// expanded = append(expanded, existing...)
+	for _, g := range existing {
 		var files []string
 		files, err = filepath.Glob(g)
 		if err != nil {
@@ -123,6 +116,14 @@ func expandGlobs(globs []string, existing []string) (expanded []string, err erro
 			}
 		}
 	}
+	for _, path := range expanded {
+		full, err := filepath.Abs(path)
+		if err != nil {
+			continue
+		}
+		path = filepath.Clean(full)
+		found[path] = true
+	}
 
 	return
 }
@@ -139,8 +140,8 @@ func main() {
 			"json-only":   predict.Nothing,
 			"match":       predict.Nothing,
 			"head":        predict.Nothing,
-			"glob":        predict.Nothing,
 			"interval":    predict.Nothing,
+			"files":       predict.Files("*"),
 		},
 	}
 	cmd.Complete("gotail")
@@ -148,7 +149,7 @@ func main() {
 	// Set re-check interval and ensure it is not zero
 	interval := args.Args.Interval
 	if interval == 0 {
-		interval = 1
+		interval = 5
 	}
 
 	var noColourFlag = args.Args.NoColour
@@ -328,7 +329,7 @@ func main() {
 	}
 
 	// look at files to tail
-	files, err := expandGlobs(args.Args.Glob, args.Args.Files)
+	files, err := expandGlobs(args.Args.Files)
 	if err != nil {
 		panic(err)
 	}
@@ -357,19 +358,22 @@ func main() {
 		// make empty set of followed files
 		var newFollowedFiles = make([]*output.FollowedFile, 0, 100)
 
-		foundNew := false
 		// Iterate through file path args and for each get then print out lines
+		var foundNew bool
 		for i := 0; i < len(files); i++ {
 			path, err := filepath.Abs(files[i])
 			if err != nil {
 				continue
 			}
 
+			// Check if path is already followed
 			if filesFollowed[path] {
 				continue
 			}
 
+			// If the path was found in filesFollowed set foundNew to true
 			foundNew = true
+			// Set path for future lookups
 			filesFollowed[path] = true
 
 			lines, total, err := input.GetLines(files[i], head, startAtOffset, numLines)
@@ -416,9 +420,9 @@ func main() {
 		// Code will exit below if follow is set
 		go func() {
 			// If there were glob arguments check for new ever few seconds
-			if len(args.Args.Glob) > 0 {
+			if len(args.Args.Files) > 0 {
 				for {
-					files, err = expandGlobs(args.Args.Glob, args.Args.Files)
+					files, err = expandGlobs(args.Args.Files)
 					if err != nil {
 						panic(err)
 					}

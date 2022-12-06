@@ -76,18 +76,12 @@ with one or more final arguments or as glob patterns with one or more -G paramet
 If files are followed for new data the glob file list will be checked every interval
 seconds.
 
-gotail
-------
-commit:  407f215
-tag:     v0.1.5
-date:    2022-11-21T01:07:27Z
+commit:  49eb490
+tag:     v0.1.8
+date:    2022-12-05T23:49:57Z
 
-Usage: gotail [--nocolour] [--follow] [--numlines NUMLINES] [--printextra] 
-      [--linenumbers] [--json] [--json-only] [--match MATCH] [--head] [--glob GLOB] 
-      [--interval INTERVAL] [FILES [FILES ...]]
-
-Positional arguments:
-  FILES                  files to tail
+Usage: gotail [--nocolour] [--follow] [--numlines NUMLINES] [--printextra] [--linenumbers] 
+[--json] [--json-only] [--match MATCH] [--head] [--interval INTERVAL] [--files FILES]
 
 Options:
   --nocolour, -C         no colour
@@ -97,16 +91,17 @@ Options:
   --printextra, -p       print extra formatting to output if more than one file is listed
   --linenumbers, -N      show line numbers
   --json, -j             pretty print JSON
-  --json-only, -J        ignore non-JSON
+  --json-only, -J        ignore non-JSON and process JSON
   --match MATCH, -m MATCH
                          match lines by regex
   --head, -H             print head of file rather than tail
-  --glob GLOB, -G GLOB   quoted filesystem glob patterns - will find new files
   --interval INTERVAL, -i INTERVAL
                          seconds between new file checks [default: 1]
+  --files FILES, -f FILES
+                         files to tail
   --help, -h             display this help and exit
   --version              display version and exit
-  ```
+```
 
 One possible extension would be to periodically look for new files and add them
 to a followed list.
@@ -146,11 +141,12 @@ Windows. If there is an issue the tail package allows for a different strategy
 to be used for tracking file changes. I have not implemented support for
 optional polling.
 
-Somewhat surprisingly, file globbing works for path patterns that contain the
-`*` character. I have not read the source code of the flag package but the logic
-to intepret globbing patterns as paths must be in there. Thus this works:
-
-`gotail -N -n 15 sample/*.txt`
+File paths with wildcard globs must be quoted or they will be converted to their full
+paths otherwise. For example, `gotail -files "tmp/*txt"` would preserve the
+globbing but `gotail -files tmp/*txt` would expand the globbing pattern each
+time the glob was checked. If a new file that matched the globbing pattern was 
+added to the directory it would ot be found since the files would have been 
+expanded on the first run. This is non-ideal but I have not found a workaround.
 
 The code is stuctured to limit memory usage. The buffer used to read in lines
 only allocates to the lines slice when it is within range (for tail or head) and

@@ -107,6 +107,8 @@ builds:
         -X github.com/imarsman/gotail.cmd/internal/args.GitLastTag={{.PreviousTag}}
         -X github.com/imarsman/gotail/cmd/internal/args.GitExactTag={{.Tag}}
         -X github.com/imarsman/gotail/cmd/internal/args.Date={{.Date}}
+        -s 
+        -w
     id: gotail
     dir: .
     main: ./cmd/gotail
