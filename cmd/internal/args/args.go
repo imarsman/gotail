@@ -37,8 +37,8 @@ type args struct {
 func (args) Description() string {
 	return `This is an implementation of the tail utility. File patterns can be specified
 with one or more final arguments or as glob patterns with one or more -G parameters.
-If files are followed for new data the glob file list will be checked every interval
-seconds.
+If files are followed for new data the glob file list will be checked every 
+interval seconds. Initiate completion by running COMP_INSTALL=1 gotail
 `
 }
 
